@@ -4,193 +4,176 @@ import json
 from datetime import datetime
 
 # =============================================================================
-# PAGE CONFIG - Must be first Streamlit command
+# PAGE CONFIG
 # =============================================================================
 
 st.set_page_config(
-    page_title="Singapore Flat Resale Insights",
-    page_icon="🏠",
+    page_title="AI Data Assistant",
+    page_icon="✨",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
 # =============================================================================
-# CUSTOM CSS - Julius.ai inspired clean design
+# CUSTOM CSS - ChatGPT/Claude inspired design
 # =============================================================================
 
 st.markdown("""
 <style>
-    /* Hide Streamlit branding */
+    /* Hide Streamlit defaults */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Main container */
+    /* Remove default padding */
     .main .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-        max-width: 100%;
+        padding: 0 !important;
+        max-width: 100% !important;
     }
     
-    /* Chat container styling */
-    .chat-container {
-        background: #fafafa;
-        border-radius: 16px;
-        padding: 1.5rem;
-        height: calc(100vh - 200px);
-        overflow-y: auto;
-        border: 1px solid #e5e5e5;
+    /* Full height layout */
+    .main {
+        background: #f7f7f8;
     }
     
-    /* Message bubbles */
-    .user-message {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1rem 1.25rem;
-        border-radius: 18px 18px 4px 18px;
-        margin: 0.75rem 0;
-        margin-left: 20%;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
-    }
-    
-    .ai-message {
+    /* Top navigation bar */
+    .top-nav {
         background: white;
+        border-bottom: 1px solid #e5e5e5;
+        padding: 0.75rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+    
+    .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .nav-brand h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
         color: #1a1a1a;
-        padding: 1.25rem;
-        border-radius: 18px 18px 18px 4px;
-        margin: 0.75rem 0;
-        margin-right: 10%;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-        border: 1px solid #f0f0f0;
     }
     
-    .ai-message h4 {
-        color: #667eea;
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
-        font-weight: 600;
-    }
-    
-    /* Dashboard badge */
-    .dashboard-badge {
-        display: inline-block;
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    .nav-brand .logo {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #10a37f 0%, #1a7f64 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         color: white;
-        padding: 0.35rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        margin-bottom: 0.75rem;
+        font-weight: bold;
     }
     
-    /* Welcome header */
-    .welcome-header {
-        text-align: center;
-        padding: 2rem 1rem;
-    }
-    
-    .welcome-header h1 {
-        font-size: 2rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 0.5rem;
-    }
-    
-    .welcome-header p {
-        color: #666;
-        font-size: 1.1rem;
-    }
-    
-    /* Suggestion chips */
-    .suggestion-chip {
-        display: inline-block;
-        background: white;
-        border: 1.5px solid #e5e5e5;
-        padding: 0.6rem 1rem;
-        border-radius: 24px;
-        margin: 0.3rem;
-        font-size: 0.9rem;
-        color: #444;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    .suggestion-chip:hover {
-        border-color: #667eea;
-        color: #667eea;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
-    }
-    
-    /* Input area styling */
-    .stTextInput > div > div > input {
-        border-radius: 24px !important;
-        padding: 0.75rem 1.25rem !important;
-        border: 2px solid #e5e5e5 !important;
-        font-size: 1rem !important;
-    }
-    
-    .stTextInput > div > div > input:focus {
-        border-color: #667eea !important;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
-    }
-    
-    /* Settings panel */
-    .settings-panel {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #e5e5e5;
-    }
-    
-    .settings-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 1rem;
+    /* Dataset selector pill */
+    .dataset-selector {
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        background: #f7f7f8;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        color: #666;
     }
     
-    /* Status indicator */
-    .status-connected {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: #e8f5e9;
-        color: #2e7d32;
-        padding: 0.3rem 0.75rem;
-        border-radius: 16px;
-        font-size: 0.8rem;
+    .dataset-name {
         font-weight: 500;
+        color: #1a1a1a;
     }
     
-    .status-disconnected {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: #fff3e0;
-        color: #e65100;
-        padding: 0.3rem 0.75rem;
-        border-radius: 16px;
-        font-size: 0.8rem;
-        font-weight: 500;
+    /* Main chat container */
+    .chat-main {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 60px);
     }
     
-    /* Power BI container */
-    .powerbi-container {
+    /* Messages area */
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem 0;
+    }
+    
+    /* Single message wrapper */
+    .message-wrapper {
+        padding: 1.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .message-wrapper:last-child {
+        border-bottom: none;
+    }
+    
+    .message-wrapper.assistant {
         background: white;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #e5e5e5;
     }
     
-    .powerbi-header {
-        background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+    /* Message content */
+    .message-content {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .message-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 1rem;
+    }
+    
+    .message-avatar.user {
+        background: #1a1a1a;
+        color: white;
+    }
+    
+    .message-avatar.assistant {
+        background: linear-gradient(135deg, #10a37f 0%, #1a7f64 100%);
+        color: white;
+    }
+    
+    .message-text {
+        flex: 1;
+        line-height: 1.7;
+        color: #1a1a1a;
+    }
+    
+    .message-text p {
+        margin: 0 0 1rem 0;
+    }
+    
+    .message-text p:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Dashboard embed in message */
+    .dashboard-embed {
+        margin-top: 1rem;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e5e5e5;
+        background: white;
+    }
+    
+    .dashboard-header {
+        background: #f7f7f8;
         padding: 0.75rem 1rem;
         border-bottom: 1px solid #e5e5e5;
         display: flex;
@@ -198,73 +181,225 @@ st.markdown("""
         justify-content: space-between;
     }
     
-    .powerbi-title {
-        font-weight: 600;
-        color: #333;
-        font-size: 0.95rem;
-    }
-    
-    /* Data info card */
-    .data-info {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 12px;
-        margin-bottom: 1rem;
-    }
-    
-    .data-info h4 {
-        margin: 0 0 0.5rem 0;
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-    
-    .data-info p {
-        margin: 0;
-        font-size: 1.5rem;
-        font-weight: 700;
-    }
-    
-    /* Hide default button styling */
-    .stButton > button {
-        border-radius: 24px;
-        padding: 0.5rem 1.5rem;
+    .dashboard-title {
         font-weight: 500;
-        transition: all 0.2s ease;
+        font-size: 0.9rem;
+        color: #1a1a1a;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .dashboard-badge {
+        background: #10a37f;
+        color: white;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    /* Input area at bottom */
+    .input-area {
+        background: white;
+        border-top: 1px solid #e5e5e5;
+        padding: 1rem 1.5rem 1.5rem;
+    }
+    
+    .input-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .input-box {
+        background: #f7f7f8;
+        border: 1px solid #e5e5e5;
+        border-radius: 16px;
+        padding: 0.25rem;
+        display: flex;
+        align-items: flex-end;
+        gap: 0.5rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .input-box:focus-within {
+        border-color: #10a37f;
+        box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
+    }
+    
+    .input-disclaimer {
+        text-align: center;
+        font-size: 0.75rem;
+        color: #999;
+        margin-top: 0.75rem;
+    }
+    
+    /* Welcome screen */
+    .welcome-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 1.5rem;
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .welcome-logo {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #10a37f 0%, #1a7f64 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .welcome-title {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+    
+    .welcome-subtitle {
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 2rem;
+    }
+    
+    /* Suggestion cards */
+    .suggestions-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        width: 100%;
+        max-width: 600px;
+    }
+    
+    .suggestion-card {
+        background: white;
+        border: 1px solid #e5e5e5;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .suggestion-card:hover {
+        border-color: #10a37f;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    
+    .suggestion-icon {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .suggestion-text {
+        font-size: 0.9rem;
+        color: #1a1a1a;
+        line-height: 1.4;
+    }
+    
+    /* Streamlit overrides */
+    .stTextArea textarea {
+        border: none !important;
+        background: transparent !important;
+        resize: none !important;
+        font-size: 1rem !important;
+        line-height: 1.5 !important;
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .stTextArea textarea:focus {
+        box-shadow: none !important;
+    }
+    
+    .stButton > button {
+        background: #1a1a1a !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 0.6rem 1rem !important;
+        font-weight: 500 !important;
+        transition: background 0.2s !important;
     }
     
     .stButton > button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        background: #333 !important;
     }
     
-    /* Typing indicator */
-    .typing-indicator {
+    .stButton > button:disabled {
+        background: #ccc !important;
+    }
+    
+    /* Hide labels */
+    .stTextArea label, .stSelectbox label {
+        display: none !important;
+    }
+    
+    /* Selectbox styling */
+    .stSelectbox > div > div {
+        background: transparent !important;
+        border: none !important;
+    }
+    
+    /* Thinking animation */
+    .thinking {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .thinking-dots {
         display: flex;
         gap: 4px;
-        padding: 0.5rem;
     }
     
-    .typing-dot {
-        width: 8px;
-        height: 8px;
-        background: #667eea;
+    .thinking-dot {
+        width: 6px;
+        height: 6px;
+        background: #10a37f;
         border-radius: 50%;
-        animation: typing 1.4s infinite;
+        animation: thinking 1.4s infinite;
     }
     
-    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
     
-    @keyframes typing {
-        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-        30% { transform: translateY(-4px); opacity: 1; }
+    @keyframes thinking {
+        0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+        30% { opacity: 1; transform: scale(1); }
+    }
+    
+    /* Settings toggle */
+    .settings-toggle {
+        background: none;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 0.5rem;
+        cursor: pointer;
+        color: #666;
+        transition: all 0.2s;
+    }
+    
+    .settings-toggle:hover {
+        background: #f7f7f8;
+        color: #1a1a1a;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # =============================================================================
-# SESSION STATE INITIALIZATION
+# SESSION STATE
 # =============================================================================
 
 if "messages" not in st.session_state:
@@ -274,84 +409,60 @@ if "current_dashboard_url" not in st.session_state:
     st.session_state.current_dashboard_url = ""
 
 if "current_dashboard_name" not in st.session_state:
-    st.session_state.current_dashboard_name = "Overview"
+    st.session_state.current_dashboard_name = ""
 
 if "webhook_url" not in st.session_state:
     st.session_state.webhook_url = ""
 
-if "default_dashboard_url" not in st.session_state:
-    st.session_state.default_dashboard_url = "https://app.powerbi.com/reportEmbed?reportId=a29b6d25-81bf-4985-9094-f30a48534cd8&autoAuth=true&ctid=f688b0d0-79f0-40a4-8644-35fcdee9d0f3"
+if "selected_dataset" not in st.session_state:
+    st.session_state.selected_dataset = "singapore_flat_resale"
 
 if "show_settings" not in st.session_state:
     st.session_state.show_settings = False
 
-if "processing" not in st.session_state:
-    st.session_state.processing = False
-
-# Initialize current dashboard URL if not set
-if not st.session_state.current_dashboard_url:
-    st.session_state.current_dashboard_url = st.session_state.default_dashboard_url
-
 # =============================================================================
-# DATASET INFO
+# DATASETS CONFIGURATION
 # =============================================================================
 
-DATASET_INFO = """
-Singapore Flat Resale Price (1990-1999)
+DATASETS = {
+    "singapore_flat_resale": {
+        "name": "Singapore Flat Resale Prices",
+        "description": "287,202 HDB resale transactions from 1990-1999",
+        "default_dashboard": "https://app.powerbi.com/reportEmbed?reportId=a29b6d25-81bf-4985-9094-f30a48534cd8&autoAuth=true&ctid=f688b0d0-79f0-40a4-8644-35fcdee9d0f3",
+        "info": """Singapore Flat Resale Prices (1990-1999)
 Total Records: 287,202 transactions
 Columns: month, town, flat_type, block, street_name, storey_range, floor_area_sqm, flat_model, lease_commence_date, resale_price
-
-Available flat types: 1 ROOM, 2 ROOM, 3 ROOM, 4 ROOM, 5 ROOM, EXECUTIVE, MULTI GENERATION
-Available towns: ANG MO KIO, BEDOK, BISHAN, BUKIT BATOK, BUKIT MERAH, BUKIT TIMAH, CENTRAL AREA, CHOA CHU KANG, CLEMENTI, GEYLANG, HOUGANG, JURONG EAST, JURONG WEST, KALLANG/WHAMPOA, LIM CHU KANG, MARINE PARADE, PASIR RIS, QUEENSTOWN, SEMBAWANG, SENGKANG, SERANGOON, TAMPINES, TOA PAYOH, WOODLANDS, YISHUN
-"""
-
-# =============================================================================
-# SIMULATED DASHBOARDS (for demo mode)
-# =============================================================================
-
-SIMULATED_DASHBOARDS = [
-    {
-        "dashboard_id": "overview",
-        "dashboard_name": "Overview",
-        "description": "General overview of all HDB resale data",
-        "embed_url": st.session_state.default_dashboard_url
+Flat types: 1 ROOM, 2 ROOM, 3 ROOM, 4 ROOM, 5 ROOM, EXECUTIVE, MULTI GENERATION
+Towns: ANG MO KIO, BEDOK, BISHAN, BUKIT BATOK, BUKIT MERAH, BUKIT TIMAH, CENTRAL AREA, CHOA CHU KANG, CLEMENTI, GEYLANG, HOUGANG, JURONG EAST, JURONG WEST, KALLANG/WHAMPOA, MARINE PARADE, PASIR RIS, QUEENSTOWN, SEMBAWANG, SERANGOON, TAMPINES, TOA PAYOH, WOODLANDS, YISHUN"""
     },
-    {
-        "dashboard_id": "price_analysis",
-        "dashboard_name": "Price Analysis", 
-        "description": "Price trends over time",
-        "embed_url": st.session_state.default_dashboard_url
-    },
-    {
-        "dashboard_id": "flat_type",
-        "dashboard_name": "Flat Type Analysis",
-        "description": "Compare flat types",
-        "embed_url": st.session_state.default_dashboard_url
-    },
-    {
-        "dashboard_id": "town_analysis",
-        "dashboard_name": "Town Analysis",
-        "description": "Geographic analysis",
-        "embed_url": st.session_state.default_dashboard_url
+    "sample_sales": {
+        "name": "Sample Sales Data",
+        "description": "Demo sales dataset for testing",
+        "default_dashboard": "https://app.powerbi.com/reportEmbed?reportId=a29b6d25-81bf-4985-9094-f30a48534cd8&autoAuth=true&ctid=f688b0d0-79f0-40a4-8644-35fcdee9d0f3",
+        "info": """Sample Sales Data
+Columns: date, product, category, region, sales_amount, quantity
+Regions: North, South, East, West
+Categories: Electronics, Clothing, Food, Home"""
     }
-]
+}
 
 # =============================================================================
 # FUNCTIONS
 # =============================================================================
 
 def call_make_webhook(user_question):
-    """Send question to Make.com and get AI response"""
+    """Send question to Make.com"""
     
-    # If no webhook configured, use simulation
+    dataset = DATASETS[st.session_state.selected_dataset]
+    
     if not st.session_state.webhook_url or "YOUR_WEBHOOK" in st.session_state.webhook_url:
         return simulate_ai_response(user_question)
     
     try:
         payload = {
             "question": user_question,
-            "dataset": "singapore_flat_resale_price",
-            "dataset_info": DATASET_INFO
+            "dataset": st.session_state.selected_dataset,
+            "dataset_info": dataset["info"]
         }
         
         response = requests.post(
@@ -366,8 +477,8 @@ def call_make_webhook(user_question):
             return {
                 "success": True,
                 "insight": result.get("insight", "Analysis complete."),
-                "dashboard_name": result.get("dashboard_name", "Overview"),
-                "dashboard_url": result.get("dashboard_url", st.session_state.default_dashboard_url)
+                "dashboard_name": result.get("dashboard_name", "Dashboard"),
+                "dashboard_url": result.get("dashboard_url", dataset["default_dashboard"])
             }
         else:
             return simulate_ai_response(user_question)
@@ -377,105 +488,134 @@ def call_make_webhook(user_question):
 
 
 def simulate_ai_response(question):
-    """Simulate AI response for demo/testing"""
+    """Simulate AI response"""
     question_lower = question.lower()
+    dataset = DATASETS[st.session_state.selected_dataset]
     
-    if any(word in question_lower for word in ["price", "cost", "expensive", "cheap", "afford", "trend", "increase", "decrease", "average"]):
-        dashboard_name = "Price Analysis"
-        insight = """Looking at the price data, I can see some interesting patterns:
+    if st.session_state.selected_dataset == "singapore_flat_resale":
+        if any(word in question_lower for word in ["price", "cost", "expensive", "cheap", "afford", "trend", "average"]):
+            return {
+                "success": True,
+                "insight": """Based on my analysis of the Singapore flat resale data, here are the key price insights:
 
-**Key Findings:**
-• Average resale prices ranged from **$39,565** (1-Room) to **$453,941** (Multi-Generation)
-• Prices showed a general **upward trend** throughout 1990-1999
-• The biggest price jumps occurred during **1995-1997**
+**Price Overview (1990-1999):**
+- The average resale price across all transactions was **$219,541**
+- Prices ranged from $5,000 for older 1-room flats to over $900,000 for premium executive flats
+- There was a significant upward trend from 1990 to 1997, followed by a slight decline during the Asian Financial Crisis
 
-I've switched to the Price Analysis dashboard where you can explore these trends interactively. Try using the time slicer to compare specific periods!"""
+**By Flat Type:**
+- 1-Room: $39,565 average
+- 3-Room: $124,352 average  
+- 4-Room: $228,502 average
+- 5-Room: $328,741 average
+- Executive: $440,907 average
 
-    elif any(word in question_lower for word in ["room", "flat type", "1-room", "2-room", "3-room", "4-room", "5-room", "executive", "type", "size"]):
-        dashboard_name = "Flat Type Analysis"
-        insight = """Here's what the data shows about flat types:
+I've loaded the **Price Analysis** dashboard below where you can explore these trends interactively. Try using the filters to compare specific time periods or flat types.""",
+                "dashboard_name": "Price Analysis",
+                "dashboard_url": dataset["default_dashboard"]
+            }
+        
+        elif any(word in question_lower for word in ["town", "area", "location", "where", "region", "bishan", "tampines", "bedok"]):
+            return {
+                "success": True,
+                "insight": """Here's my analysis of prices by town/location:
 
-**Transaction Volume:**
-• **3-Room flats** were most popular with 113,106 transactions
-• **4-Room flats** came second with 98,521 transactions
-• Executive flats had the lowest volume at 12,847
-
-**Average Prices:**
-• 3-Room: **$124,352**
-• 4-Room: **$228,502**
-• Executive: **$440,907**
-
-The Flat Type Analysis dashboard shows these comparisons visually. Click on any flat type to filter all the charts!"""
-
-    elif any(word in question_lower for word in ["town", "area", "location", "region", "where", "tampines", "bishan", "bedok", "ang mo kio", "woodlands", "highest", "lowest"]):
-        dashboard_name = "Town Analysis"
-        insight = """Geographic analysis reveals significant price variations:
-
-**Most Expensive Towns:**
-• **Bukit Timah**: $389,234 average
-• **Bishan**: $312,456 average  
-• **Pasir Ris**: $298,765 average
+**Most Expensive Towns (by average price):**
+1. **Bukit Timah** - $389,234 (premium central location)
+2. **Bishan** - $312,456 (near amenities, MRT)
+3. **Pasir Ris** - $298,765 (newer developments)
 
 **Most Affordable Towns:**
-• **Lim Chu Kang**: $98,234 average
-• **Sembawang**: $124,567 average
-• **Woodlands**: $145,678 average
+1. **Sembawang** - $124,567
+2. **Woodlands** - $145,678
+3. **Jurong West** - $156,789
 
-I've loaded the Town Analysis dashboard. Use the town slicer to compare specific areas side by side!"""
+**Highest Transaction Volume:**
+- Tampines, Bedok, and Ang Mo Kio had the most transactions, indicating these were popular choices for homebuyers.
 
+The **Town Analysis** dashboard below lets you compare any towns side by side. Use the town filter to select specific areas you're interested in.""",
+                "dashboard_name": "Town Analysis", 
+                "dashboard_url": dataset["default_dashboard"]
+            }
+        
+        elif any(word in question_lower for word in ["room", "flat type", "3-room", "4-room", "5-room", "executive", "type", "bedroom"]):
+            return {
+                "success": True,
+                "insight": """Here's a breakdown by flat type:
+
+**Transaction Volume:**
+| Flat Type | Transactions | Avg Price |
+|-----------|-------------|-----------|
+| 3-Room | 113,106 (39%) | $124,352 |
+| 4-Room | 98,521 (34%) | $228,502 |
+| 5-Room | 45,234 (16%) | $328,741 |
+| Executive | 12,847 (4%) | $440,907 |
+| Others | 17,494 (6%) | Various |
+
+**Key Insights:**
+- **3-Room flats** were the most popular choice, making up 39% of all transactions
+- **4-Room flats** were the sweet spot for families, balancing space and affordability
+- **Executive flats** commanded premium prices but had limited availability
+
+The dashboard below shows detailed comparisons. Click on any flat type to filter all the charts!""",
+                "dashboard_name": "Flat Type Analysis",
+                "dashboard_url": dataset["default_dashboard"]
+            }
+        
+        else:
+            return {
+                "success": True,
+                "insight": """Welcome! I'm ready to help you explore the Singapore Flat Resale dataset.
+
+**Dataset Overview:**
+- **287,202** resale transactions from 1990-1999
+- Covers **25 towns** across Singapore
+- Includes **7 flat types** from 1-Room to Executive
+
+**What I can help you with:**
+- 📈 Price trends and analysis
+- 🏢 Comparisons between flat types
+- 📍 Town-by-town breakdowns
+- 🔍 Specific queries about the data
+
+**Try asking:**
+- "Which towns have the highest prices?"
+- "Compare 3-room vs 4-room flats"
+- "Show me price trends over time"
+
+The dashboard below shows an overview of the data. Feel free to interact with it!""",
+                "dashboard_name": "Overview",
+                "dashboard_url": dataset["default_dashboard"]
+            }
+    
     else:
-        dashboard_name = "Overview"
-        insight = """Here's an overview of the Singapore flat resale market (1990-1999):
-
-**Dataset Summary:**
-• **287,202** total transactions
-• Price range: **$5,000 - $900,000**
-• Overall average: **$219,541**
-• Peak activity year: **1997**
-
-**What would you like to explore?**
-• Ask about price trends over time
-• Compare different flat types (3-room vs 4-room)
-• Analyze prices by town/location
-• Find the most expensive or affordable areas"""
-
-    # Find matching dashboard URL
-    dashboard_url = st.session_state.default_dashboard_url
-    for d in SIMULATED_DASHBOARDS:
-        if d["dashboard_name"] == dashboard_name:
-            dashboard_url = d["embed_url"]
-            break
-
-    return {
-        "success": True,
-        "insight": insight,
-        "dashboard_name": dashboard_name,
-        "dashboard_url": dashboard_url
-    }
+        return {
+            "success": True,
+            "insight": f"I'm analyzing the {dataset['name']} dataset. This is a demo response - connect Make.com for real AI analysis.",
+            "dashboard_name": "Dashboard",
+            "dashboard_url": dataset["default_dashboard"]
+        }
 
 
 def process_question(question):
-    """Process user question and update state"""
-    # Add user message
+    """Process user question"""
     st.session_state.messages.append({
         "role": "user",
         "content": question,
-        "timestamp": datetime.now().strftime("%H:%M")
+        "timestamp": datetime.now()
     })
     
-    # Get AI response
     response = call_make_webhook(question)
     
-    # Update dashboard
     st.session_state.current_dashboard_name = response["dashboard_name"]
     st.session_state.current_dashboard_url = response["dashboard_url"]
     
-    # Add AI message
     st.session_state.messages.append({
         "role": "assistant",
         "content": response["insight"],
-        "dashboard": response["dashboard_name"],
-        "timestamp": datetime.now().strftime("%H:%M")
+        "dashboard_name": response["dashboard_name"],
+        "dashboard_url": response["dashboard_url"],
+        "timestamp": datetime.now()
     })
 
 
@@ -485,213 +625,187 @@ def process_question(question):
 
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
-    
     st.markdown("---")
     
     st.markdown("**Make.com Webhook URL**")
-    webhook_input = st.text_input(
-        "Webhook URL",
+    webhook = st.text_input(
+        "webhook",
         value=st.session_state.webhook_url,
         placeholder="https://hook.us1.make.com/...",
         label_visibility="collapsed"
     )
-    if webhook_input != st.session_state.webhook_url:
-        st.session_state.webhook_url = webhook_input
-    
-    st.markdown("**Default Power BI Dashboard**")
-    default_url_input = st.text_input(
-        "Default Dashboard URL",
-        value=st.session_state.default_dashboard_url,
-        placeholder="https://app.powerbi.com/reportEmbed?...",
-        label_visibility="collapsed"
-    )
-    if default_url_input != st.session_state.default_dashboard_url:
-        st.session_state.default_dashboard_url = default_url_input
-        st.session_state.current_dashboard_url = default_url_input
+    if webhook != st.session_state.webhook_url:
+        st.session_state.webhook_url = webhook
     
     st.markdown("---")
     
-    # Connection status
+    st.markdown("**Dataset Configuration**")
+    st.caption("Edit DATASETS in app.py to add more datasets and their Power BI URLs")
+    
+    st.markdown("---")
+    
     if st.session_state.webhook_url and "YOUR_WEBHOOK" not in st.session_state.webhook_url:
-        st.markdown('<span class="status-connected">🟢 Make.com Connected</span>', unsafe_allow_html=True)
+        st.success("✅ Make.com Connected")
     else:
-        st.markdown('<span class="status-disconnected">🟡 Demo Mode (Simulated)</span>', unsafe_allow_html=True)
+        st.warning("🟡 Demo Mode")
     
     st.markdown("---")
     
     if st.button("🗑️ Clear Chat", use_container_width=True):
         st.session_state.messages = []
+        st.session_state.current_dashboard_url = ""
+        st.session_state.current_dashboard_name = ""
         st.rerun()
-    
-    st.markdown("---")
-    
-    with st.expander("ℹ️ Setup Guide"):
-        st.markdown("""
-        **1. Create Google Sheet** with columns:
-        - dashboard_id
-        - dashboard_name  
-        - description
-        - embed_url
-        
-        **2. Set up Make.com** scenario:
-        - Webhook trigger
-        - Google Sheets (read rows)
-        - AI module (analyze question)
-        - Webhook response
-        
-        **3. Paste webhook URL** above
-        
-        **4. Login to Power BI** in this browser before demo
-        """)
+
 
 # =============================================================================
-# MAIN LAYOUT
+# MAIN UI
 # =============================================================================
 
-# Create two columns
-col_chat, col_dashboard = st.columns([1, 1.5])
+# Top Navigation Bar
+col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
 
-# =============================================================================
-# LEFT COLUMN - Chat Interface
-# =============================================================================
-
-with col_chat:
-    # Header with data info
+with col_nav1:
     st.markdown("""
-    <div class="data-info">
-        <h4>📊 Singapore Flat Resale Price</h4>
-        <p>287,202 Transactions</p>
+    <div class="nav-brand">
+        <div class="logo">✨</div>
+        <h1>AI Data Assistant</h1>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col_nav2:
+    # Dataset selector
+    dataset_options = {k: v["name"] for k, v in DATASETS.items()}
+    selected = st.selectbox(
+        "dataset",
+        options=list(dataset_options.keys()),
+        format_func=lambda x: f"📊 {dataset_options[x]}",
+        index=list(dataset_options.keys()).index(st.session_state.selected_dataset),
+        label_visibility="collapsed"
+    )
+    if selected != st.session_state.selected_dataset:
+        st.session_state.selected_dataset = selected
+        st.session_state.messages = []  # Clear chat when switching datasets
+        st.rerun()
+
+with col_nav3:
+    col_settings, col_space = st.columns([1, 2])
+    with col_settings:
+        if st.button("⚙️", help="Settings"):
+            st.session_state.show_settings = not st.session_state.show_settings
+
+st.markdown("---")
+
+# =============================================================================
+# CHAT AREA
+# =============================================================================
+
+# If no messages, show welcome screen
+if not st.session_state.messages:
+    dataset = DATASETS[st.session_state.selected_dataset]
+    
+    st.markdown(f"""
+    <div class="welcome-screen">
+        <div class="welcome-logo">✨</div>
+        <div class="welcome-title">What would you like to explore?</div>
+        <div class="welcome-subtitle">Ask questions about {dataset['name']}</div>
     </div>
     """, unsafe_allow_html=True)
     
-    # Chat container
-    chat_container = st.container()
+    # Suggestion cards
+    col1, col2 = st.columns(2)
     
-    with chat_container:
-        # If no messages, show welcome
-        if not st.session_state.messages:
-            st.markdown("""
-            <div class="welcome-header">
-                <h1>🏠 Singapore Flat Resale Insights</h1>
-                <p>Ask me anything about flat resale prices (1990-1999)</p>
+    suggestions = [
+        ("📈", "Show me price trends over time"),
+        ("📍", "Which areas have the highest prices?"),
+        ("🏢", "Compare different flat types"),
+        ("🔍", "Give me an overview of the data")
+    ]
+    
+    for i, (icon, text) in enumerate(suggestions):
+        with col1 if i % 2 == 0 else col2:
+            if st.button(f"{icon} {text}", key=f"sug_{i}", use_container_width=True):
+                process_question(text)
+                st.rerun()
+
+else:
+    # Display messages
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            st.markdown(f"""
+            <div class="message-wrapper">
+                <div class="message-content">
+                    <div class="message-avatar user">👤</div>
+                    <div class="message-text">{msg['content']}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        else:
+            # Assistant message with dashboard
+            content = msg['content'].replace('\n', '<br>')
+            dashboard_url = msg.get('dashboard_url', '')
+            dashboard_name = msg.get('dashboard_name', 'Dashboard')
+            
+            st.markdown(f"""
+            <div class="message-wrapper assistant">
+                <div class="message-content">
+                    <div class="message-avatar assistant">✨</div>
+                    <div class="message-text">
+                        {content}
+                    </div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
             
-            # Suggestion chips
-            st.markdown("**Try asking:**")
-            
-            suggestions = [
-                "What are the price trends?",
-                "Which towns are most expensive?",
-                "Compare 3-room vs 4-room flats",
-                "Show me an overview"
-            ]
-            
-            cols = st.columns(2)
-            for i, suggestion in enumerate(suggestions):
-                with cols[i % 2]:
-                    if st.button(suggestion, key=f"suggest_{i}", use_container_width=True):
-                        process_question(suggestion)
-                        st.rerun()
-        
-        else:
-            # Display chat messages
-            for msg in st.session_state.messages:
-                if msg["role"] == "user":
-                    st.markdown(f"""
-                    <div class="user-message">
-                        {msg["content"]}
+            # Embed dashboard after the message
+            if dashboard_url:
+                st.markdown(f"""
+                <div style="max-width: 800px; margin: 0 auto; padding: 0 1.5rem 1.5rem 3.5rem;">
+                    <div class="dashboard-embed">
+                        <div class="dashboard-header">
+                            <span class="dashboard-title">
+                                📊 {dashboard_name}
+                                <span class="dashboard-badge">Interactive</span>
+                            </span>
+                        </div>
                     </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    dashboard = msg.get("dashboard", "")
-                    st.markdown(f"""
-                    <div class="ai-message">
-                        <span class="dashboard-badge">📊 {dashboard}</span>
-                        {msg["content"].replace(chr(10), "<br>")}
-                    </div>
-                    """, unsafe_allow_html=True)
-    
-    # Input area at bottom
-    st.markdown("---")
-    
-    col_input, col_send = st.columns([5, 1])
-    
-    with col_input:
-        user_input = st.text_input(
-            "Ask about your data...",
-            placeholder="e.g., What's the average price for 4-room flats in Tampines?",
-            label_visibility="collapsed",
-            key="user_input"
-        )
-    
-    with col_send:
-        send_clicked = st.button("➤", type="primary", use_container_width=True)
-    
-    # Handle input
-    if send_clicked and user_input:
-        process_question(user_input)
-        st.rerun()
-    
-    # Quick actions when there are messages
-    if st.session_state.messages:
-        st.markdown("**Quick questions:**")
-        quick_cols = st.columns(4)
-        quick_questions = ["📈 Prices", "🏢 Flat types", "📍 Towns", "🔄 Overview"]
-        quick_full = [
-            "Show me price trends",
-            "Compare flat types",
-            "Which towns are expensive?",
-            "Give me an overview"
-        ]
-        for i, (label, question) in enumerate(zip(quick_questions, quick_full)):
-            with quick_cols[i]:
-                if st.button(label, key=f"quick_{i}", use_container_width=True):
-                    process_question(question)
-                    st.rerun()
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Actual iframe
+                with st.container():
+                    st.components.v1.iframe(dashboard_url, height=500, scrolling=True)
 
 # =============================================================================
-# RIGHT COLUMN - Power BI Dashboard
-# =============================================================================
-
-with col_dashboard:
-    # Dashboard header
-    st.markdown(f"""
-    <div class="powerbi-container">
-        <div class="powerbi-header">
-            <span class="powerbi-title">📊 {st.session_state.current_dashboard_name}</span>
-            <span style="font-size: 0.8rem; color: #666;">Power BI Dashboard</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Embed Power BI
-    if st.session_state.current_dashboard_url:
-        st.components.v1.iframe(
-            st.session_state.current_dashboard_url,
-            height=650,
-            scrolling=True
-        )
-    else:
-        st.info("👆 Configure your Power BI dashboard URL in the sidebar settings")
-    
-    # Dashboard tips
-    with st.expander("💡 Dashboard Tips"):
-        st.markdown("""
-        - **Click on charts** to cross-filter other visuals
-        - **Use slicers** on the left to filter by flat type or time period
-        - **Hover over bars** to see exact values
-        - **Ask follow-up questions** in the chat to switch views
-        """)
-
-# =============================================================================
-# FOOTER
+# INPUT AREA
 # =============================================================================
 
 st.markdown("---")
+
+# Input at the bottom
+col_input, col_btn = st.columns([6, 1])
+
+with col_input:
+    user_input = st.text_area(
+        "message",
+        placeholder="Ask anything about your data...",
+        height=80,
+        label_visibility="collapsed",
+        key="user_input"
+    )
+
+with col_btn:
+    st.markdown("<br>", unsafe_allow_html=True)  # Spacing
+    send = st.button("Send", type="primary", use_container_width=True)
+
+if send and user_input.strip():
+    process_question(user_input.strip())
+    st.rerun()
+
+# Disclaimer
 st.markdown("""
-<div style="text-align: center; color: #999; font-size: 0.85rem; padding: 1rem;">
-    Built with Streamlit • Powered by Make.com AI • Dashboard by Power BI<br>
-    <span style="font-size: 0.75rem;">💡 Tip: Open sidebar (>) to configure webhook and dashboard settings</span>
+<div class="input-disclaimer">
+    AI-powered analysis • Dashboards update based on your questions
 </div>
 """, unsafe_allow_html=True)
