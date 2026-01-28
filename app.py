@@ -1,7 +1,11 @@
 import streamlit as st
 import requests
 import json
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime
+import re
 
 # =============================================================================
 # PAGE CONFIG
@@ -15,305 +19,244 @@ st.set_page_config(
 )
 
 # =============================================================================
-# CUSTOM CSS - ChatGPT/Claude inspired design
+# CUSTOM CSS - Julius.ai inspired clean design
 # =============================================================================
 
 st.markdown("""
 <style>
+    /* Import Google Font */
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    
     /* Hide Streamlit defaults */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Remove default padding */
+    /* Global styles */
+    html, body, [class*="css"] {
+        font-family: 'DM Sans', sans-serif;
+    }
+    
     .main .block-container {
-        padding: 0 !important;
-        max-width: 100% !important;
+        padding: 2rem 3rem;
+        max-width: 900px;
+        margin: 0 auto;
     }
     
-    /* Full height layout */
-    .main {
-        background: #f7f7f8;
+    /* Background */
+    .stApp {
+        background: linear-gradient(180deg, #fafafa 0%, #f5f5f7 100%);
     }
     
-    /* Top navigation bar */
-    .top-nav {
-        background: white;
-        border-bottom: 1px solid #e5e5e5;
-        padding: 0.75rem 1.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        position: sticky;
-        top: 0;
-        z-index: 100;
+    /* Welcome header */
+    .welcome-container {
+        text-align: center;
+        padding: 4rem 2rem 3rem;
     }
     
-    .nav-brand {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    
-    .nav-brand h1 {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin: 0;
-        color: #1a1a1a;
-    }
-    
-    .nav-brand .logo {
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, #10a37f 0%, #1a7f64 100%);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-    }
-    
-    /* Dataset selector pill */
-    .dataset-selector {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: #f7f7f8;
-        padding: 0.5rem 1rem;
+    .welcome-icon {
+        width: 72px;
+        height: 72px;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
         border-radius: 20px;
-        font-size: 0.9rem;
-        color: #666;
-    }
-    
-    .dataset-name {
-        font-weight: 500;
-        color: #1a1a1a;
-    }
-    
-    /* Main chat container */
-    .chat-main {
-        display: flex;
-        flex-direction: column;
-        height: calc(100vh - 60px);
-    }
-    
-    /* Messages area */
-    .messages-container {
-        flex: 1;
-        overflow-y: auto;
-        padding: 1rem 0;
-    }
-    
-    /* Single message wrapper */
-    .message-wrapper {
-        padding: 1.5rem 0;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    
-    .message-wrapper:last-child {
-        border-bottom: none;
-    }
-    
-    .message-wrapper.assistant {
-        background: white;
-    }
-    
-    /* Message content */
-    .message-content {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 0 1.5rem;
-        display: flex;
-        gap: 1rem;
-    }
-    
-    .message-avatar {
-        width: 36px;
-        height: 36px;
-        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-shrink: 0;
-        font-size: 1rem;
-    }
-    
-    .message-avatar.user {
-        background: #1a1a1a;
-        color: white;
-    }
-    
-    .message-avatar.assistant {
-        background: linear-gradient(135deg, #10a37f 0%, #1a7f64 100%);
-        color: white;
-    }
-    
-    .message-text {
-        flex: 1;
-        line-height: 1.7;
-        color: #1a1a1a;
-    }
-    
-    .message-text p {
-        margin: 0 0 1rem 0;
-    }
-    
-    .message-text p:last-child {
-        margin-bottom: 0;
-    }
-    
-    /* Dashboard embed in message */
-    .dashboard-embed {
-        margin-top: 1rem;
-        border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid #e5e5e5;
-        background: white;
-    }
-    
-    .dashboard-header {
-        background: #f7f7f8;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #e5e5e5;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    
-    .dashboard-title {
-        font-weight: 500;
-        font-size: 0.9rem;
-        color: #1a1a1a;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .dashboard-badge {
-        background: #10a37f;
-        color: white;
-        padding: 0.2rem 0.6rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    
-    /* Input area at bottom */
-    .input-area {
-        background: white;
-        border-top: 1px solid #e5e5e5;
-        padding: 1rem 1.5rem 1.5rem;
-    }
-    
-    .input-container {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    
-    .input-box {
-        background: #f7f7f8;
-        border: 1px solid #e5e5e5;
-        border-radius: 16px;
-        padding: 0.25rem;
-        display: flex;
-        align-items: flex-end;
-        gap: 0.5rem;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    
-    .input-box:focus-within {
-        border-color: #10a37f;
-        box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
-    }
-    
-    .input-disclaimer {
-        text-align: center;
-        font-size: 0.75rem;
-        color: #999;
-        margin-top: 0.75rem;
-    }
-    
-    /* Welcome screen */
-    .welcome-screen {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 3rem 1.5rem;
-        text-align: center;
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    
-    .welcome-logo {
-        width: 64px;
-        height: 64px;
-        background: linear-gradient(135deg, #10a37f 0%, #1a7f64 100%);
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 2rem;
-        margin-bottom: 1.5rem;
+        margin: 0 auto 1.5rem;
+        font-size: 36px;
+        box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
     }
     
     .welcome-title {
-        font-size: 1.75rem;
-        font-weight: 600;
-        color: #1a1a1a;
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: #1a1a2e;
         margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
     }
     
     .welcome-subtitle {
         font-size: 1.1rem;
-        color: #666;
+        color: #64748b;
         margin-bottom: 2rem;
     }
     
-    /* Suggestion cards */
-    .suggestions-grid {
+    /* Dataset selector cards */
+    .dataset-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
-        width: 100%;
+        gap: 1rem;
         max-width: 600px;
+        margin: 0 auto 2rem;
     }
     
-    .suggestion-card {
+    .dataset-card {
         background: white;
-        border: 1px solid #e5e5e5;
-        border-radius: 12px;
-        padding: 1rem;
+        border: 2px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
         text-align: left;
+    }
+    
+    .dataset-card:hover {
+        border-color: #6366f1;
+        box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .dataset-card.selected {
+        border-color: #6366f1;
+        background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    }
+    
+    .dataset-icon {
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .dataset-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        margin-bottom: 0.25rem;
+    }
+    
+    .dataset-desc {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    
+    /* Chat messages */
+    .message-container {
+        margin-bottom: 1.5rem;
+    }
+    
+    .user-message {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        padding: 1rem 1.25rem;
+        border-radius: 18px 18px 4px 18px;
+        margin-left: 20%;
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+    }
+    
+    .assistant-message {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 1.25rem 1.5rem;
+        border-radius: 18px 18px 18px 4px;
+        margin-right: 10%;
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        line-height: 1.7;
+        color: #334155;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+    
+    .assistant-message strong {
+        color: #1a1a2e;
+    }
+    
+    /* Summary card */
+    .summary-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+    
+    .summary-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .summary-icon {
+        font-size: 1.5rem;
+    }
+    
+    .summary-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+    
+    .summary-content {
+        color: #475569;
+        font-size: 0.95rem;
+        line-height: 1.7;
+    }
+    
+    /* Suggestion chips */
+    .suggestions-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .suggestion-chip {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+        color: #475569;
         cursor: pointer;
         transition: all 0.2s;
     }
     
-    .suggestion-card:hover {
-        border-color: #10a37f;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    .suggestion-chip:hover {
+        background: #f1f5f9;
+        border-color: #6366f1;
+        color: #6366f1;
     }
     
-    .suggestion-icon {
-        font-size: 1.25rem;
-        margin-bottom: 0.5rem;
+    /* Input area */
+    .input-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(0deg, #fafafa 80%, transparent 100%);
+        padding: 1rem 2rem 2rem;
     }
     
-    .suggestion-text {
-        font-size: 0.9rem;
-        color: #1a1a1a;
-        line-height: 1.4;
+    .input-box {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 0.5rem;
+        display: flex;
+        align-items: flex-end;
+        gap: 0.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: border-color 0.2s;
+    }
+    
+    .input-box:focus-within {
+        border-color: #6366f1;
     }
     
     /* Streamlit overrides */
     .stTextArea textarea {
+        font-family: 'DM Sans', sans-serif !important;
         border: none !important;
         background: transparent !important;
+        font-size: 0.95rem !important;
         resize: none !important;
-        font-size: 1rem !important;
-        line-height: 1.5 !important;
         padding: 0.75rem 1rem !important;
     }
     
@@ -322,78 +265,120 @@ st.markdown("""
     }
     
     .stButton > button {
-        background: #1a1a1a !important;
+        font-family: 'DM Sans', sans-serif !important;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
         color: white !important;
         border: none !important;
         border-radius: 12px !important;
-        padding: 0.6rem 1rem !important;
-        font-weight: 500 !important;
-        transition: background 0.2s !important;
+        padding: 0.75rem 1.5rem !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        transition: all 0.2s !important;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
     }
     
     .stButton > button:hover {
-        background: #333 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
     }
     
-    .stButton > button:disabled {
-        background: #ccc !important;
+    /* Chart container */
+    .chart-container {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 1rem 0;
     }
     
-    /* Hide labels */
-    .stTextArea label, .stSelectbox label {
-        display: none !important;
+    /* Follow-up questions */
+    .followup-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
     }
     
-    /* Selectbox styling */
-    .stSelectbox > div > div {
-        background: transparent !important;
-        border: none !important;
-    }
-    
-    /* Thinking animation */
+    /* Thinking indicator */
     .thinking {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        color: #666;
+        color: #64748b;
         font-size: 0.9rem;
-    }
-    
-    .thinking-dots {
-        display: flex;
-        gap: 4px;
+        padding: 1rem;
     }
     
     .thinking-dot {
-        width: 6px;
-        height: 6px;
-        background: #10a37f;
+        width: 8px;
+        height: 8px;
+        background: #6366f1;
         border-radius: 50%;
-        animation: thinking 1.4s infinite;
+        animation: pulse 1.5s infinite;
     }
     
-    .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
-    .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
-    
-    @keyframes thinking {
-        0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
-        30% { opacity: 1; transform: scale(1); }
+    @keyframes pulse {
+        0%, 100% { opacity: 0.4; transform: scale(0.8); }
+        50% { opacity: 1; transform: scale(1); }
     }
     
-    /* Settings toggle */
-    .settings-toggle {
-        background: none;
-        border: 1px solid #e5e5e5;
-        border-radius: 8px;
-        padding: 0.5rem;
-        cursor: pointer;
-        color: #666;
-        transition: all 0.2s;
+    /* Dashboard placeholder */
+    .dashboard-placeholder {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 2px dashed #cbd5e1;
+        border-radius: 16px;
+        padding: 3rem 2rem;
+        text-align: center;
+        margin: 1rem 0;
     }
     
-    .settings-toggle:hover {
-        background: #f7f7f8;
-        color: #1a1a1a;
+    .dashboard-placeholder-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .dashboard-placeholder-text {
+        color: #64748b;
+        font-size: 0.95rem;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+    
+    /* Hide default streamlit elements */
+    .stDeployButton {display: none;}
+    div[data-testid="stToolbar"] {display: none;}
+    div[data-testid="stDecoration"] {display: none;}
+    
+    /* Selectbox styling */
+    .stSelectbox > div > div {
+        background: white !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        font-family: 'DM Sans', sans-serif !important;
+    }
+    
+    .stSelectbox > div > div:focus {
+        border-color: #6366f1 !important;
+    }
+    
+    /* Add bottom padding for fixed input */
+    .main-content {
+        padding-bottom: 120px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -405,407 +390,453 @@ st.markdown("""
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "current_dashboard_url" not in st.session_state:
-    st.session_state.current_dashboard_url = ""
-
-if "current_dashboard_name" not in st.session_state:
-    st.session_state.current_dashboard_name = ""
-
-if "webhook_url" not in st.session_state:
-    st.session_state.webhook_url = ""
-
 if "selected_dataset" not in st.session_state:
-    st.session_state.selected_dataset = "singapore_flat_resale"
+    st.session_state.selected_dataset = None
 
-if "show_settings" not in st.session_state:
-    st.session_state.show_settings = False
+if "dataset_summary" not in st.session_state:
+    st.session_state.dataset_summary = None
 
-# =============================================================================
-# DATASETS CONFIGURATION
-# =============================================================================
+if "stats_data" not in st.session_state:
+    st.session_state.stats_data = None
 
-DATASETS = {
-    "singapore_flat_resale": {
-        "name": "Singapore Flat Resale Prices",
-        "description": "287,202 HDB resale transactions from 1990-1999",
-        "default_dashboard": "https://app.powerbi.com/reportEmbed?reportId=a29b6d25-81bf-4985-9094-f30a48534cd8&autoAuth=true&ctid=f688b0d0-79f0-40a4-8644-35fcdee9d0f3",
-        "info": """Singapore Flat Resale Prices (1990-1999)
-Total Records: 287,202 transactions
-Columns: month, town, flat_type, block, street_name, storey_range, floor_area_sqm, flat_model, lease_commence_date, resale_price
-Flat types: 1 ROOM, 2 ROOM, 3 ROOM, 4 ROOM, 5 ROOM, EXECUTIVE, MULTI GENERATION
-Towns: ANG MO KIO, BEDOK, BISHAN, BUKIT BATOK, BUKIT MERAH, BUKIT TIMAH, CENTRAL AREA, CHOA CHU KANG, CLEMENTI, GEYLANG, HOUGANG, JURONG EAST, JURONG WEST, KALLANG/WHAMPOA, MARINE PARADE, PASIR RIS, QUEENSTOWN, SEMBAWANG, SERANGOON, TAMPINES, TOA PAYOH, WOODLANDS, YISHUN"""
-    },
-    "sample_sales": {
-        "name": "Sample Sales Data",
-        "description": "Demo sales dataset for testing",
-        "default_dashboard": "https://app.powerbi.com/reportEmbed?reportId=a29b6d25-81bf-4985-9094-f30a48534cd8&autoAuth=true&ctid=f688b0d0-79f0-40a4-8644-35fcdee9d0f3",
-        "info": """Sample Sales Data
-Columns: date, product, category, region, sales_amount, quantity
-Regions: North, South, East, West
-Categories: Electronics, Clothing, Food, Home"""
-    }
-}
+if "datasets_info" not in st.session_state:
+    st.session_state.datasets_info = None
 
 # =============================================================================
-# FUNCTIONS
+# GOOGLE SHEETS FUNCTIONS
 # =============================================================================
 
-def call_make_webhook(user_question):
-    """Send question to Make.com"""
-    
-    dataset = DATASETS[st.session_state.selected_dataset]
-    
-    if not st.session_state.webhook_url or "YOUR_WEBHOOK" in st.session_state.webhook_url:
-        return simulate_ai_response(user_question)
-    
+@st.cache_data(ttl=300)
+def load_google_sheet_data(sheet_id, tab_name):
+    """Load data from a public Google Sheet tab"""
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={tab_name}"
     try:
-        payload = {
-            "question": user_question,
-            "dataset": st.session_state.selected_dataset,
-            "dataset_info": dataset["info"]
-        }
+        df = pd.read_csv(url)
+        return df
+    except Exception as e:
+        st.error(f"Error loading {tab_name}: {e}")
+        return None
+
+def get_datasets():
+    """Get list of datasets from Google Sheet"""
+    try:
+        sheet_id = st.secrets["GOOGLE_SHEET_ID"]
+        df = load_google_sheet_data(sheet_id, "Datasets")
+        if df is not None:
+            return df.to_dict('records')
+    except Exception as e:
+        st.error(f"Error loading datasets: {e}")
+    return []
+
+def get_stats(dataset_id):
+    """Get stats for a specific dataset"""
+    try:
+        sheet_id = st.secrets["GOOGLE_SHEET_ID"]
+        df = load_google_sheet_data(sheet_id, "Stats")
+        if df is not None:
+            filtered = df[df['dataset_id'] == dataset_id]
+            return filtered.to_dict('records')
+    except Exception as e:
+        st.error(f"Error loading stats: {e}")
+    return []
+
+def get_dashboards(dataset_id):
+    """Get dashboards for a specific dataset"""
+    try:
+        sheet_id = st.secrets["GOOGLE_SHEET_ID"]
+        df = load_google_sheet_data(sheet_id, "Dashboards")
+        if df is not None:
+            filtered = df[df['dataset_id'] == dataset_id]
+            return filtered.to_dict('records')
+    except Exception as e:
+        st.error(f"Error loading dashboards: {e}")
+    return []
+
+# =============================================================================
+# DEEPSEEK API FUNCTIONS
+# =============================================================================
+
+def call_deepseek(messages, system_prompt):
+    """Call DeepSeek API"""
+    try:
+        api_key = st.secrets["DEEPSEEK_API_KEY"]
         
         response = requests.post(
-            st.session_state.webhook_url,
-            json=payload,
-            headers={"Content-Type": "application/json"},
-            timeout=30
+            "https://api.deepseek.com/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "deepseek-chat",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    *messages
+                ],
+                "temperature": 0.7,
+                "max_tokens": 2000
+            },
+            timeout=60
         )
         
         if response.status_code == 200:
-            result = response.json()
-            return {
-                "success": True,
-                "insight": result.get("insight", "Analysis complete."),
-                "dashboard_name": result.get("dashboard_name", "Dashboard"),
-                "dashboard_url": result.get("dashboard_url", dataset["default_dashboard"])
-            }
+            return response.json()["choices"][0]["message"]["content"]
         else:
-            return simulate_ai_response(user_question)
-            
+            return f"Error: {response.status_code} - {response.text}"
     except Exception as e:
-        return simulate_ai_response(user_question)
+        return f"Error calling DeepSeek: {str(e)}"
 
-
-def simulate_ai_response(question):
-    """Simulate AI response"""
-    question_lower = question.lower()
-    dataset = DATASETS[st.session_state.selected_dataset]
+def format_stats_for_prompt(stats):
+    """Format stats into a readable string for the AI prompt"""
+    if not stats:
+        return "No statistics available."
     
-    if st.session_state.selected_dataset == "singapore_flat_resale":
-        if any(word in question_lower for word in ["price", "cost", "expensive", "cheap", "afford", "trend", "average"]):
-            return {
-                "success": True,
-                "insight": """Based on my analysis of the Singapore flat resale data, here are the key price insights:
-
-**Price Overview (1990-1999):**
-- The average resale price across all transactions was **$219,541**
-- Prices ranged from $5,000 for older 1-room flats to over $900,000 for premium executive flats
-- There was a significant upward trend from 1990 to 1997, followed by a slight decline during the Asian Financial Crisis
-
-**By Flat Type:**
-- 1-Room: $39,565 average
-- 3-Room: $124,352 average  
-- 4-Room: $228,502 average
-- 5-Room: $328,741 average
-- Executive: $440,907 average
-
-I've loaded the **Price Analysis** dashboard below where you can explore these trends interactively. Try using the filters to compare specific time periods or flat types.""",
-                "dashboard_name": "Price Analysis",
-                "dashboard_url": dataset["default_dashboard"]
-            }
-        
-        elif any(word in question_lower for word in ["town", "area", "location", "where", "region", "bishan", "tampines", "bedok"]):
-            return {
-                "success": True,
-                "insight": """Here's my analysis of prices by town/location:
-
-**Most Expensive Towns (by average price):**
-1. **Bukit Timah** - $389,234 (premium central location)
-2. **Bishan** - $312,456 (near amenities, MRT)
-3. **Pasir Ris** - $298,765 (newer developments)
-
-**Most Affordable Towns:**
-1. **Sembawang** - $124,567
-2. **Woodlands** - $145,678
-3. **Jurong West** - $156,789
-
-**Highest Transaction Volume:**
-- Tampines, Bedok, and Ang Mo Kio had the most transactions, indicating these were popular choices for homebuyers.
-
-The **Town Analysis** dashboard below lets you compare any towns side by side. Use the town filter to select specific areas you're interested in.""",
-                "dashboard_name": "Town Analysis", 
-                "dashboard_url": dataset["default_dashboard"]
-            }
-        
-        elif any(word in question_lower for word in ["room", "flat type", "3-room", "4-room", "5-room", "executive", "type", "bedroom"]):
-            return {
-                "success": True,
-                "insight": """Here's a breakdown by flat type:
-
-**Transaction Volume:**
-| Flat Type | Transactions | Avg Price |
-|-----------|-------------|-----------|
-| 3-Room | 113,106 (39%) | $124,352 |
-| 4-Room | 98,521 (34%) | $228,502 |
-| 5-Room | 45,234 (16%) | $328,741 |
-| Executive | 12,847 (4%) | $440,907 |
-| Others | 17,494 (6%) | Various |
-
-**Key Insights:**
-- **3-Room flats** were the most popular choice, making up 39% of all transactions
-- **4-Room flats** were the sweet spot for families, balancing space and affordability
-- **Executive flats** commanded premium prices but had limited availability
-
-The dashboard below shows detailed comparisons. Click on any flat type to filter all the charts!""",
-                "dashboard_name": "Flat Type Analysis",
-                "dashboard_url": dataset["default_dashboard"]
-            }
-        
-        else:
-            return {
-                "success": True,
-                "insight": """Welcome! I'm ready to help you explore the Singapore Flat Resale dataset.
-
-**Dataset Overview:**
-- **287,202** resale transactions from 1990-1999
-- Covers **25 towns** across Singapore
-- Includes **7 flat types** from 1-Room to Executive
-
-**What I can help you with:**
-- 📈 Price trends and analysis
-- 🏢 Comparisons between flat types
-- 📍 Town-by-town breakdowns
-- 🔍 Specific queries about the data
-
-**Try asking:**
-- "Which towns have the highest prices?"
-- "Compare 3-room vs 4-room flats"
-- "Show me price trends over time"
-
-The dashboard below shows an overview of the data. Feel free to interact with it!""",
-                "dashboard_name": "Overview",
-                "dashboard_url": dataset["default_dashboard"]
-            }
+    formatted = []
+    current_category = None
     
+    for stat in stats:
+        category = stat.get('stat_category', 'general')
+        if category != current_category:
+            current_category = category
+            formatted.append(f"\n## {category.upper()}")
+        formatted.append(f"- {stat.get('stat_name', 'N/A')}: {stat.get('stat_value', 'N/A')}")
+    
+    return "\n".join(formatted)
+
+def get_ai_response(user_question, dataset_name, stats):
+    """Get AI response for a user question"""
+    
+    stats_text = format_stats_for_prompt(stats)
+    
+    system_prompt = f"""You are an expert data analyst assistant helping users understand the "{dataset_name}" dataset.
+
+## Available Statistics:
+{stats_text}
+
+## Your Role:
+1. Answer questions using ONLY the statistics provided above
+2. Be specific - use actual numbers from the stats
+3. Provide actionable insights, not just facts
+4. If asked to create a chart, respond with a JSON code block containing chart specifications
+
+## Response Format:
+- For text insights: Respond naturally with clear explanations
+- For charts: Include a JSON block with chart type and data
+- Always end with 2-3 suggested follow-up questions
+
+## Chart JSON Format (when charts are requested):
+```json
+{{
+    "chart_type": "bar|line|pie|scatter",
+    "title": "Chart Title",
+    "data": {{"labels": [...], "values": [...]}},
+    "x_label": "X Axis Label",
+    "y_label": "Y Axis Label"
+}}
+```
+
+## Important:
+- Be conversational and helpful
+- Highlight key insights and patterns
+- If you can't answer from the stats, say so
+- Suggest visualizations when relevant"""
+
+    messages = [{"role": "user", "content": user_question}]
+    
+    return call_deepseek(messages, system_prompt)
+
+def parse_chart_from_response(response):
+    """Extract chart JSON from AI response if present"""
+    # Look for JSON code block
+    json_pattern = r'```json\s*(.*?)\s*```'
+    matches = re.findall(json_pattern, response, re.DOTALL)
+    
+    if matches:
+        try:
+            chart_data = json.loads(matches[0])
+            return chart_data
+        except json.JSONDecodeError:
+            pass
+    return None
+
+def create_chart(chart_data):
+    """Create a Plotly chart from chart data"""
+    chart_type = chart_data.get("chart_type", "bar")
+    title = chart_data.get("title", "Chart")
+    data = chart_data.get("data", {})
+    labels = data.get("labels", [])
+    values = data.get("values", [])
+    x_label = chart_data.get("x_label", "")
+    y_label = chart_data.get("y_label", "")
+    
+    if chart_type == "bar":
+        fig = px.bar(x=labels, y=values, title=title)
+        fig.update_layout(xaxis_title=x_label, yaxis_title=y_label)
+    elif chart_type == "line":
+        fig = px.line(x=labels, y=values, title=title, markers=True)
+        fig.update_layout(xaxis_title=x_label, yaxis_title=y_label)
+    elif chart_type == "pie":
+        fig = px.pie(names=labels, values=values, title=title)
+    elif chart_type == "scatter":
+        fig = px.scatter(x=labels, y=values, title=title)
+        fig.update_layout(xaxis_title=x_label, yaxis_title=y_label)
     else:
-        return {
-            "success": True,
-            "insight": f"I'm analyzing the {dataset['name']} dataset. This is a demo response - connect Make.com for real AI analysis.",
-            "dashboard_name": "Dashboard",
-            "dashboard_url": dataset["default_dashboard"]
-        }
-
-
-def process_question(question):
-    """Process user question"""
-    st.session_state.messages.append({
-        "role": "user",
-        "content": question,
-        "timestamp": datetime.now()
-    })
+        fig = px.bar(x=labels, y=values, title=title)
     
-    response = call_make_webhook(question)
-    
-    st.session_state.current_dashboard_name = response["dashboard_name"]
-    st.session_state.current_dashboard_url = response["dashboard_url"]
-    
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": response["insight"],
-        "dashboard_name": response["dashboard_name"],
-        "dashboard_url": response["dashboard_url"],
-        "timestamp": datetime.now()
-    })
-
-
-# =============================================================================
-# SIDEBAR - Settings
-# =============================================================================
-
-with st.sidebar:
-    st.markdown("### ⚙️ Settings")
-    st.markdown("---")
-    
-    st.markdown("**Make.com Webhook URL**")
-    webhook = st.text_input(
-        "webhook",
-        value=st.session_state.webhook_url,
-        placeholder="https://hook.us1.make.com/...",
-        label_visibility="collapsed"
+    # Apply consistent styling
+    fig.update_layout(
+        font_family="DM Sans",
+        title_font_size=16,
+        title_font_color="#1a1a2e",
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        margin=dict(t=50, l=50, r=30, b=50)
     )
-    if webhook != st.session_state.webhook_url:
-        st.session_state.webhook_url = webhook
+    fig.update_traces(marker_color="#6366f1")
     
-    st.markdown("---")
-    
-    st.markdown("**Dataset Configuration**")
-    st.caption("Edit DATASETS in app.py to add more datasets and their Power BI URLs")
-    
-    st.markdown("---")
-    
-    if st.session_state.webhook_url and "YOUR_WEBHOOK" not in st.session_state.webhook_url:
-        st.success("✅ Make.com Connected")
-    else:
-        st.warning("🟡 Demo Mode")
-    
-    st.markdown("---")
-    
-    if st.button("🗑️ Clear Chat", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.current_dashboard_url = ""
-        st.session_state.current_dashboard_name = ""
-        st.rerun()
+    return fig
 
+def extract_followup_questions(response):
+    """Extract follow-up questions from AI response"""
+    questions = []
+    lines = response.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        # Look for numbered questions or bullet points
+        if re.match(r'^[\d\.\-\*\•]\s*.*\?', line):
+            # Clean up the question
+            question = re.sub(r'^[\d\.\-\*\•]\s*', '', line).strip()
+            if len(question) > 10:
+                questions.append(question)
+    
+    return questions[:3]  # Return max 3 questions
 
 # =============================================================================
-# MAIN UI
+# UI COMPONENTS
 # =============================================================================
 
-# Top Navigation Bar
-col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
-
-with col_nav1:
+def render_welcome_screen():
+    """Render the welcome/dataset selection screen"""
     st.markdown("""
-    <div class="nav-brand">
-        <div class="logo">✨</div>
-        <h1>AI Data Assistant</h1>
+    <div class="welcome-container">
+        <div class="welcome-icon">✨</div>
+        <div class="welcome-title">What do you want to analyze today?</div>
+        <div class="welcome-subtitle">Select a dataset to get started</div>
     </div>
     """, unsafe_allow_html=True)
 
-with col_nav2:
-    # Dataset selector
-    dataset_options = {k: v["name"] for k, v in DATASETS.items()}
-    selected = st.selectbox(
-        "dataset",
-        options=list(dataset_options.keys()),
-        format_func=lambda x: f"📊 {dataset_options[x]}",
-        index=list(dataset_options.keys()).index(st.session_state.selected_dataset),
-        label_visibility="collapsed"
-    )
-    if selected != st.session_state.selected_dataset:
-        st.session_state.selected_dataset = selected
-        st.session_state.messages = []  # Clear chat when switching datasets
-        st.rerun()
-
-with col_nav3:
-    col_settings, col_space = st.columns([1, 2])
-    with col_settings:
-        if st.button("⚙️", help="Settings"):
-            st.session_state.show_settings = not st.session_state.show_settings
-
-st.markdown("---")
-
-# =============================================================================
-# CHAT AREA
-# =============================================================================
-
-# If no messages, show welcome screen
-if not st.session_state.messages:
-    dataset = DATASETS[st.session_state.selected_dataset]
+def render_dataset_cards(datasets):
+    """Render dataset selection cards"""
+    icons = {"sg_flat": "🏠", "nz_airbnb": "🏡"}
     
-    st.markdown(f"""
-    <div class="welcome-screen">
-        <div class="welcome-logo">✨</div>
-        <div class="welcome-title">What would you like to explore?</div>
-        <div class="welcome-subtitle">Ask questions about {dataset['name']}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Suggestion cards
-    col1, col2 = st.columns(2)
-    
-    suggestions = [
-        ("📈", "Show me price trends over time"),
-        ("📍", "Which areas have the highest prices?"),
-        ("🏢", "Compare different flat types"),
-        ("🔍", "Give me an overview of the data")
-    ]
-    
-    for i, (icon, text) in enumerate(suggestions):
-        with col1 if i % 2 == 0 else col2:
-            if st.button(f"{icon} {text}", key=f"sug_{i}", use_container_width=True):
-                process_question(text)
+    cols = st.columns(2)
+    for i, dataset in enumerate(datasets):
+        with cols[i % 2]:
+            icon = icons.get(dataset['dataset_id'], '📊')
+            if st.button(
+                f"{icon} {dataset['dataset_name']}",
+                key=f"dataset_{dataset['dataset_id']}",
+                use_container_width=True
+            ):
+                st.session_state.selected_dataset = dataset['dataset_id']
+                st.session_state.dataset_summary = dataset['summary']
+                st.session_state.messages = []
                 st.rerun()
 
-else:
-    # Display messages
-    for msg in st.session_state.messages:
-        if msg["role"] == "user":
-            st.markdown(f"""
-            <div class="message-wrapper">
-                <div class="message-content">
-                    <div class="message-avatar user">👤</div>
-                    <div class="message-text">{msg['content']}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+def render_summary_card(dataset_name, summary):
+    """Render the dataset summary card"""
+    st.markdown(f"""
+    <div class="summary-card">
+        <div class="summary-header">
+            <span class="summary-icon">📊</span>
+            <span class="summary-title">{dataset_name}</span>
+        </div>
+        <div class="summary-content">{summary}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_message(role, content):
+    """Render a chat message"""
+    if role == "user":
+        st.markdown(f'<div class="user-message">{content}</div>', unsafe_allow_html=True)
+    else:
+        # Remove JSON code blocks from display
+        display_content = re.sub(r'```json\s*.*?\s*```', '', content, flags=re.DOTALL)
+        display_content = display_content.strip()
         
+        # Convert markdown-style formatting
+        display_content = display_content.replace('\n', '<br>')
+        
+        st.markdown(f'<div class="assistant-message">{display_content}</div>', unsafe_allow_html=True)
+
+def render_suggestions(questions):
+    """Render follow-up question suggestions"""
+    if questions:
+        st.markdown('<div class="followup-title">Suggested questions</div>', unsafe_allow_html=True)
+        cols = st.columns(len(questions))
+        for i, q in enumerate(questions):
+            with cols[i]:
+                if st.button(q[:50] + "..." if len(q) > 50 else q, key=f"suggestion_{i}"):
+                    return q
+    return None
+
+# =============================================================================
+# MAIN APP
+# =============================================================================
+
+def main():
+    # Load datasets
+    datasets = get_datasets()
+    
+    # Main content area
+    st.markdown('<div class="main-content">', unsafe_allow_html=True)
+    
+    # =========================================================================
+    # SCREEN 1: Dataset Selection
+    # =========================================================================
+    if st.session_state.selected_dataset is None:
+        render_welcome_screen()
+        
+        if datasets:
+            render_dataset_cards(datasets)
         else:
-            # Assistant message with dashboard
-            content = msg['content'].replace('\n', '<br>')
-            dashboard_url = msg.get('dashboard_url', '')
-            dashboard_name = msg.get('dashboard_name', 'Dashboard')
+            st.warning("Unable to load datasets. Please check your Google Sheet configuration.")
+    
+    # =========================================================================
+    # SCREEN 2: Chat Interface
+    # =========================================================================
+    else:
+        # Get current dataset info
+        current_dataset = next(
+            (d for d in datasets if d['dataset_id'] == st.session_state.selected_dataset),
+            None
+        )
+        
+        if current_dataset:
+            # Header with dataset name and back button
+            col1, col2 = st.columns([6, 1])
+            with col1:
+                st.markdown(f"### 📊 {current_dataset['dataset_name']}")
+            with col2:
+                if st.button("← Back"):
+                    st.session_state.selected_dataset = None
+                    st.session_state.messages = []
+                    st.rerun()
             
-            st.markdown(f"""
-            <div class="message-wrapper assistant">
-                <div class="message-content">
-                    <div class="message-avatar assistant">✨</div>
-                    <div class="message-text">
-                        {content}
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Embed dashboard after the message
-            if dashboard_url:
-                st.markdown(f"""
-                <div style="max-width: 800px; margin: 0 auto; padding: 0 1.5rem 1.5rem 3.5rem;">
-                    <div class="dashboard-embed">
-                        <div class="dashboard-header">
-                            <span class="dashboard-title">
-                                📊 {dashboard_name}
-                                <span class="dashboard-badge">Interactive</span>
-                            </span>
-                        </div>
-                    </div>
+            # Show summary if no messages yet
+            if not st.session_state.messages:
+                render_summary_card(
+                    current_dataset['dataset_name'],
+                    current_dataset['summary']
+                )
+                
+                st.markdown("""
+                <div style="text-align: center; color: #64748b; margin: 2rem 0;">
+                    <p>What insights are you looking for?</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Actual iframe
-                with st.container():
-                    st.components.v1.iframe(dashboard_url, height=500, scrolling=True)
+                # Initial suggestions
+                suggestions = [
+                    "What are the key trends in this data?",
+                    "Show me a breakdown by category",
+                    "What are the highest and lowest values?",
+                    "Create a chart comparing the main segments"
+                ]
+                
+                cols = st.columns(2)
+                for i, sugg in enumerate(suggestions):
+                    with cols[i % 2]:
+                        if st.button(sugg, key=f"init_sugg_{i}", use_container_width=True):
+                            st.session_state.messages.append({"role": "user", "content": sugg})
+                            st.rerun()
+            
+            # Display chat messages
+            for msg in st.session_state.messages:
+                render_message(msg["role"], msg["content"])
+                
+                # If assistant message, check for chart
+                if msg["role"] == "assistant":
+                    chart_data = parse_chart_from_response(msg["content"])
+                    if chart_data:
+                        fig = create_chart(chart_data)
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Show follow-up suggestions after last assistant message
+                    if msg == st.session_state.messages[-1]:
+                        followups = extract_followup_questions(msg["content"])
+                        selected = render_suggestions(followups)
+                        if selected:
+                            st.session_state.messages.append({"role": "user", "content": selected})
+                            st.rerun()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # =========================================================================
+    # INPUT AREA (Fixed at bottom)
+    # =========================================================================
+    if st.session_state.selected_dataset:
+        st.markdown("---")
+        
+        col1, col2 = st.columns([6, 1])
+        
+        with col1:
+            user_input = st.text_area(
+                "Ask a question",
+                placeholder="Ask about the data, request insights, or ask for a chart...",
+                height=80,
+                label_visibility="collapsed",
+                key="user_input"
+            )
+        
+        with col2:
+            st.write("")  # Spacing
+            send_button = st.button("Send ➤", use_container_width=True)
+        
+        # Process user input
+        if send_button and user_input.strip():
+            # Add user message
+            st.session_state.messages.append({"role": "user", "content": user_input.strip()})
+            
+            # Get stats for current dataset
+            stats = get_stats(st.session_state.selected_dataset)
+            
+            # Get current dataset name
+            current_dataset = next(
+                (d for d in datasets if d['dataset_id'] == st.session_state.selected_dataset),
+                {"dataset_name": "Dataset"}
+            )
+            
+            # Check if user is asking for dashboard
+            dashboard_keywords = ["dashboard", "interactive", "power bi", "powerbi", "full view", "explore data"]
+            if any(kw in user_input.lower() for kw in dashboard_keywords):
+                # Dashboard request - placeholder for Make.com integration
+                response = """I'd love to show you the interactive dashboard! 
 
-# =============================================================================
-# INPUT AREA
-# =============================================================================
+🚧 **Dashboard Feature Coming Soon**
 
-st.markdown("---")
+The Power BI interactive dashboard integration is being set up. Once configured, you'll be able to:
+- Explore the data with interactive filters
+- Drill down into specific segments
+- View multiple visualizations simultaneously
 
-# Input at the bottom
-col_input, col_btn = st.columns([6, 1])
+In the meantime, I can help you with:
+1. What specific analysis would you like to see?
+2. Would you like me to create a chart of any particular metric?
+3. What questions do you have about the data?"""
+            else:
+                # Regular question - call DeepSeek
+                with st.spinner("Analyzing..."):
+                    response = get_ai_response(
+                        user_input.strip(),
+                        current_dataset['dataset_name'],
+                        stats
+                    )
+            
+            # Add assistant response
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.rerun()
 
-with col_input:
-    user_input = st.text_area(
-        "message",
-        placeholder="Ask anything about your data...",
-        height=80,
-        label_visibility="collapsed",
-        key="user_input"
-    )
-
-with col_btn:
-    st.markdown("<br>", unsafe_allow_html=True)  # Spacing
-    send = st.button("Send", type="primary", use_container_width=True)
-
-if send and user_input.strip():
-    process_question(user_input.strip())
-    st.rerun()
-
-# Disclaimer
-st.markdown("""
-<div class="input-disclaimer">
-    AI-powered analysis • Dashboards update based on your questions
-</div>
-""", unsafe_allow_html=True)
+if __name__ == "__main__":
+    main()
