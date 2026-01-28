@@ -107,26 +107,6 @@ st.markdown("""
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     }
     
-    .assistant-message h1, .assistant-message h2, .assistant-message h3 {
-        color: #1a1a2e;
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .assistant-message strong {
-        color: #1a1a2e;
-        font-weight: 600;
-    }
-    
-    .assistant-message ul, .assistant-message ol {
-        margin: 0.5rem 0;
-        padding-left: 1.5rem;
-    }
-    
-    .assistant-message li {
-        margin-bottom: 0.25rem;
-    }
-    
     /* STICKY Summary sidebar */
     .summary-sidebar {
         background: white;
@@ -141,36 +121,44 @@ st.markdown("""
     }
     
     .summary-sidebar-title {
-        font-size: 1rem;
-        font-weight: 600;
+        font-size: 1.1rem;
+        font-weight: 700;
         color: #1a1a2e;
-        margin-bottom: 1rem;
+        margin-bottom: 1.25rem;
         padding-bottom: 0.75rem;
-        border-bottom: 1px solid #f1f5f9;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        border-bottom: 2px solid #f1f5f9;
     }
     
-    /* Key stats boxes */
-    .key-stat-box {
+    /* Stats row - 3 cards side by side */
+    .stats-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .stat-card {
+        flex: 1;
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         border: 1px solid #e2e8f0;
         border-radius: 12px;
-        padding: 1rem;
+        padding: 0.75rem 0.5rem;
         text-align: center;
-        margin-bottom: 0.75rem;
     }
     
-    .key-stat-value {
+    .stat-icon {
         font-size: 1.25rem;
-        font-weight: 700;
-        color: #6366f1;
         margin-bottom: 0.25rem;
     }
     
-    .key-stat-label {
-        font-size: 0.75rem;
+    .stat-value {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 0.1rem;
+    }
+    
+    .stat-label {
+        font-size: 0.65rem;
         color: #64748b;
         text-transform: uppercase;
         letter-spacing: 0.03em;
@@ -181,7 +169,6 @@ st.markdown("""
         font-size: 0.85rem;
         color: #475569;
         line-height: 1.7;
-        margin-top: 1rem;
     }
     
     .summary-bullets ul {
@@ -190,7 +177,7 @@ st.markdown("""
     }
     
     .summary-bullets li {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.6rem;
     }
     
     /* Section title */
@@ -266,6 +253,11 @@ st.markdown("""
     .stDeployButton {display: none;}
     div[data-testid="stToolbar"] {display: none;}
     div[data-testid="stDecoration"] {display: none;}
+    
+    /* Loading spinner override */
+    .stSpinner > div {
+        border-color: #6366f1 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -406,6 +398,11 @@ def get_ai_response(user_question, dataset_name, stats):
 }}
 ```
 
+IMPORTANT FOR CHARTS:
+- Include ALL data points (don't skip any years, categories, etc.)
+- Make sure labels and values arrays have the same length
+- Use complete data from the statistics
+
 ## Follow-up Questions Format:
 At the end of EVERY response, include:
 ---
@@ -445,6 +442,10 @@ def create_chart(chart_data):
     values = data.get("values", [])
     x_label = chart_data.get("x_label", "")
     y_label = chart_data.get("y_label", "")
+    
+    # Ensure we have data
+    if not labels or not values:
+        return None
     
     if chart_type == "bar":
         fig = px.bar(x=labels, y=values, title=title)
@@ -505,7 +506,7 @@ def extract_followup_questions(response):
     return questions[:3]
 
 def clean_response_for_display(response):
-    """Clean response: remove JSON blocks and follow-up section, keep for markdown rendering"""
+    """Clean response: remove JSON blocks and follow-up section"""
     # Remove JSON code blocks
     cleaned = re.sub(r'```json\s*.*?\s*```', '', response, flags=re.DOTALL)
     
@@ -516,7 +517,7 @@ def clean_response_for_display(response):
     
     return cleaned.strip()
 
-def extract_key_stats(summary):
+def extract_key_stats(summary, dataset_id):
     """Extract key statistics from summary text"""
     key_stats = {}
     
@@ -531,26 +532,53 @@ def extract_key_stats(summary):
     if avg_match:
         key_stats['avg_price'] = '$' + avg_match.group(1)
     
-    # Extract price range
-    range_match = re.search(r'Price\s*range:?\s*\$?([\d,]+)\s*-\s*\$?([\d,]+)', summary, re.IGNORECASE)
-    if range_match:
-        key_stats['min_price'] = '$' + range_match.group(1)
-        key_stats['max_price'] = '$' + range_match.group(2)
+    # Extract max price
+    max_match = re.search(r'Max(?:imum)?\s*(?:price)?:?\s*\$?([\d,]+)', summary, re.IGNORECASE)
+    if not max_match:
+        # Try to get from price range
+        range_match = re.search(r'Price\s*range:?\s*\$?[\d,]+\s*-\s*\$?([\d,]+)', summary, re.IGNORECASE)
+        if range_match:
+            key_stats['max_price'] = '$' + range_match.group(1)
+    else:
+        key_stats['max_price'] = '$' + max_match.group(1)
     
     return key_stats
 
 def format_summary_as_bullets(summary):
     """Convert summary paragraph into bullet points"""
-    # Split by periods and create bullet points
     sentences = summary.split('.')
     bullets = []
     
     for sentence in sentences:
         sentence = sentence.strip()
         if len(sentence) > 10:
-            bullets.append(f"• {sentence}")
+            bullets.append(sentence)
     
     return bullets
+
+def get_initial_suggestions(dataset_id):
+    """Get better initial suggestions based on dataset"""
+    if dataset_id == "sg_flat":
+        return [
+            "Which towns have the highest and lowest prices?",
+            "How do prices vary by flat type?",
+            "Show me the price trend from 1990 to 1999",
+            "What floor levels command the highest prices?"
+        ]
+    elif dataset_id == "nz_airbnb":
+        return [
+            "Which regions have the highest prices?",
+            "How do prices vary by room type?",
+            "What's the difference between Auckland and Queenstown?",
+            "Show me a chart of prices by region"
+        ]
+    else:
+        return [
+            "What are the key insights in this data?",
+            "Which categories have the highest values?",
+            "Show me a breakdown by category",
+            "Create a chart of the main trends"
+        ]
 
 # =============================================================================
 # MAIN APP
@@ -608,14 +636,15 @@ def main():
         
         # Get stats
         stats = get_stats(st.session_state.selected_dataset)
-        key_stats = extract_key_stats(current_dataset['summary'])
+        key_stats = extract_key_stats(current_dataset['summary'], st.session_state.selected_dataset)
         summary_bullets = format_summary_as_bullets(current_dataset['summary'])
+        initial_suggestions = get_initial_suggestions(st.session_state.selected_dataset)
         
         # Layout: Main chat area + Summary sidebar
         col_main, col_sidebar = st.columns([2, 1])
         
         # ---------------------------------------------------------------------
-        # RIGHT SIDEBAR: Summary (STICKY - follows scroll)
+        # RIGHT SIDEBAR: Summary (STICKY)
         # ---------------------------------------------------------------------
         with col_sidebar:
             # Back button
@@ -633,37 +662,32 @@ def main():
                 <div class="summary-sidebar-title">
                     📊 {current_dataset['dataset_name']}
                 </div>
+                
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-value">{key_stats.get('total', 'N/A')}</div>
+                        <div class="stat-label">{key_stats.get('total_label', 'Records')}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value">{key_stats.get('avg_price', 'N/A')}</div>
+                        <div class="stat-label">Average</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-value">{key_stats.get('max_price', 'N/A')}</div>
+                        <div class="stat-label">Maximum</div>
+                    </div>
+                </div>
+                
+                <div class="summary-bullets">
+                    <ul>
             """, unsafe_allow_html=True)
             
-            # Key stats
-            if key_stats.get('avg_price'):
-                st.markdown(f"""
-                <div class="key-stat-box">
-                    <div class="key-stat-value">{key_stats['avg_price']}</div>
-                    <div class="key-stat-label">Avg Price</div>
-                </div>
-                """, unsafe_allow_html=True)
+            for bullet in summary_bullets[:6]:  # Limit to 6 bullets
+                st.markdown(f"<li>{bullet}</li>", unsafe_allow_html=True)
             
-            if key_stats.get('min_price'):
-                st.markdown(f"""
-                <div class="key-stat-box">
-                    <div class="key-stat-value">{key_stats['min_price']}</div>
-                    <div class="key-stat-label">Min Price</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            if key_stats.get('max_price'):
-                st.markdown(f"""
-                <div class="key-stat-box">
-                    <div class="key-stat-value">{key_stats['max_price']}</div>
-                    <div class="key-stat-label">Max Price</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Summary as bullet points
-            st.markdown('<div class="summary-bullets"><ul>', unsafe_allow_html=True)
-            for bullet in summary_bullets[:8]:  # Limit to 8 bullets
-                st.markdown(f"<li>{bullet[2:]}</li>", unsafe_allow_html=True)  # Remove "• " prefix
             st.markdown('</ul></div></div>', unsafe_allow_html=True)
         
         # ---------------------------------------------------------------------
@@ -680,15 +704,8 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
                 
-                suggestions = [
-                    "What are the key trends in this data?",
-                    "Which areas have the highest prices?",
-                    "Show me a breakdown by category",
-                    "Create a chart comparing the main segments"
-                ]
-                
                 cols = st.columns(2)
-                for i, sugg in enumerate(suggestions):
+                for i, sugg in enumerate(initial_suggestions):
                     with cols[i % 2]:
                         if st.button(sugg, key=f"init_sugg_{i}", use_container_width=True):
                             st.session_state.pending_question = sugg
@@ -702,7 +719,6 @@ def main():
                     # Clean and render with proper markdown
                     cleaned_content = clean_response_for_display(msg["content"])
                     
-                    # Use st.markdown for proper formatting (converts **bold** etc)
                     st.markdown(f'<div class="assistant-message">', unsafe_allow_html=True)
                     st.markdown(cleaned_content)
                     st.markdown('</div>', unsafe_allow_html=True)
@@ -711,7 +727,8 @@ def main():
                     chart_data = parse_chart_from_response(msg["content"])
                     if chart_data:
                         fig = create_chart(chart_data)
-                        st.plotly_chart(fig, use_container_width=True)
+                        if fig:
+                            st.plotly_chart(fig, use_container_width=True)
                     
                     # Show follow-up suggestions after last assistant message
                     if idx == len(st.session_state.messages) - 1:
@@ -748,7 +765,7 @@ def main():
                         st.rerun()
         
         # ---------------------------------------------------------------------
-        # PROCESS PENDING QUESTION (after UI renders)
+        # PROCESS PENDING QUESTION
         # ---------------------------------------------------------------------
         if st.session_state.pending_question:
             question = st.session_state.pending_question
@@ -774,7 +791,8 @@ In the meantime, I can help you with specific analysis or create charts for you.
 2. Which categories have the highest values?
 3. Can you create a comparison chart?"""
             else:
-                response = get_ai_response(question, current_dataset['dataset_name'], stats)
+                with st.spinner("🤔 Analyzing your question..."):
+                    response = get_ai_response(question, current_dataset['dataset_name'], stats)
             
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
