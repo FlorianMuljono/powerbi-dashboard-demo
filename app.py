@@ -38,8 +38,8 @@ st.markdown("""
     }
     
     .main .block-container {
-        padding: 2rem 3rem;
-        max-width: 900px;
+        padding: 1.5rem 2rem;
+        max-width: 1200px;
         margin: 0 auto;
     }
     
@@ -51,7 +51,7 @@ st.markdown("""
     /* Welcome header */
     .welcome-container {
         text-align: center;
-        padding: 4rem 2rem 3rem;
+        padding: 3rem 2rem 2rem;
     }
     
     .welcome-icon {
@@ -81,64 +81,13 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
-    /* Dataset selector cards */
-    .dataset-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-        max-width: 600px;
-        margin: 0 auto 2rem;
-    }
-    
-    .dataset-card {
-        background: white;
-        border: 2px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 1.5rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-align: left;
-    }
-    
-    .dataset-card:hover {
-        border-color: #6366f1;
-        box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
-        transform: translateY(-2px);
-    }
-    
-    .dataset-card.selected {
-        border-color: #6366f1;
-        background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-    }
-    
-    .dataset-icon {
-        font-size: 2rem;
-        margin-bottom: 0.75rem;
-    }
-    
-    .dataset-name {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #1a1a2e;
-        margin-bottom: 0.25rem;
-    }
-    
-    .dataset-desc {
-        font-size: 0.85rem;
-        color: #64748b;
-    }
-    
     /* Chat messages */
-    .message-container {
-        margin-bottom: 1.5rem;
-    }
-    
     .user-message {
         background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
         color: white;
         padding: 1rem 1.25rem;
         border-radius: 18px 18px 4px 18px;
-        margin-left: 20%;
+        margin-left: 15%;
         margin-bottom: 1rem;
         font-size: 0.95rem;
         line-height: 1.5;
@@ -150,7 +99,7 @@ st.markdown("""
         border: 1px solid #e2e8f0;
         padding: 1.25rem 1.5rem;
         border-radius: 18px 18px 18px 4px;
-        margin-right: 10%;
+        margin-right: 5%;
         margin-bottom: 1rem;
         font-size: 0.95rem;
         line-height: 1.7;
@@ -158,112 +107,120 @@ st.markdown("""
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     }
     
-    .assistant-message strong {
-        color: #1a1a2e;
-    }
-    
-    /* Summary card */
-    .summary-card {
+    /* Summary sidebar card */
+    .summary-sidebar {
         background: white;
         border: 1px solid #e2e8f0;
         border-radius: 16px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
+        padding: 1.25rem;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        height: fit-content;
+        position: sticky;
+        top: 1rem;
     }
     
-    .summary-header {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid #f1f5f9;
-    }
-    
-    .summary-icon {
-        font-size: 1.5rem;
-    }
-    
-    .summary-title {
-        font-size: 1.1rem;
+    .summary-sidebar-title {
+        font-size: 1rem;
         font-weight: 600;
         color: #1a1a2e;
-    }
-    
-    .summary-content {
-        color: #475569;
-        font-size: 0.95rem;
-        line-height: 1.7;
-    }
-    
-    /* Suggestion chips */
-    .suggestions-container {
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
         display: flex;
-        flex-wrap: wrap;
+        align-items: center;
         gap: 0.5rem;
-        margin-top: 1rem;
     }
     
-    .suggestion-chip {
+    /* Key stats boxes */
+    .key-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    
+    .key-stat-box {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .key-stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #6366f1;
+        margin-bottom: 0.25rem;
+    }
+    
+    .key-stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    
+    /* Summary bullets */
+    .summary-bullets {
+        font-size: 0.9rem;
+        color: #475569;
+        line-height: 1.8;
+    }
+    
+    .summary-bullets li {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Highlight box */
+    .highlight-box {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 1px solid #f59e0b;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        margin: 1rem 0;
+        font-size: 0.85rem;
+        color: #92400e;
+    }
+    
+    .highlight-box strong {
+        color: #78350f;
+    }
+    
+    /* Follow-up question buttons - FULL WIDTH, NO TRUNCATION */
+    .followup-btn {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
-        border-radius: 20px;
-        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
         font-size: 0.85rem;
         color: #475569;
         cursor: pointer;
         transition: all 0.2s;
+        text-align: left;
+        width: 100%;
+        margin-bottom: 0.5rem;
+        white-space: normal !important;
+        word-wrap: break-word;
     }
     
-    .suggestion-chip:hover {
+    .followup-btn:hover {
         background: #f1f5f9;
         border-color: #6366f1;
         color: #6366f1;
     }
     
-    /* Input area */
-    .input-container {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(0deg, #fafafa 80%, transparent 100%);
-        padding: 1rem 2rem 2rem;
+    /* Section title */
+    .section-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 1.5rem 0 0.75rem;
     }
     
-    .input-box {
-        max-width: 800px;
-        margin: 0 auto;
-        background: white;
-        border: 2px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 0.5rem;
-        display: flex;
-        align-items: flex-end;
-        gap: 0.5rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        transition: border-color 0.2s;
-    }
-    
-    .input-box:focus-within {
-        border-color: #6366f1;
-    }
-    
-    /* Streamlit overrides */
-    .stTextArea textarea {
-        font-family: 'DM Sans', sans-serif !important;
-        border: none !important;
-        background: transparent !important;
-        font-size: 0.95rem !important;
-        resize: none !important;
-        padding: 0.75rem 1rem !important;
-    }
-    
-    .stTextArea textarea:focus {
-        box-shadow: none !important;
-    }
-    
+    /* Streamlit button overrides */
     .stButton > button {
         font-family: 'DM Sans', sans-serif !important;
         background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
@@ -275,11 +232,34 @@ st.markdown("""
         font-size: 0.9rem !important;
         transition: all 0.2s !important;
         box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+        white-space: normal !important;
+        height: auto !important;
+        min-height: 50px !important;
     }
     
     .stButton > button:hover {
         transform: translateY(-1px) !important;
         box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+    }
+    
+    /* Suggestion button specific style */
+    div[data-testid="column"] .stButton > button {
+        text-align: left !important;
+        justify-content: flex-start !important;
+    }
+    
+    /* Input styling */
+    .stTextArea textarea {
+        font-family: 'DM Sans', sans-serif !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        font-size: 0.95rem !important;
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .stTextArea textarea:focus {
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
     }
     
     /* Chart container */
@@ -289,60 +269,6 @@ st.markdown("""
         border-radius: 12px;
         padding: 1rem;
         margin: 1rem 0;
-    }
-    
-    /* Follow-up questions */
-    .followup-title {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-top: 1.5rem;
-        margin-bottom: 0.75rem;
-    }
-    
-    /* Thinking indicator */
-    .thinking {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: #64748b;
-        font-size: 0.9rem;
-        padding: 1rem;
-    }
-    
-    .thinking-dot {
-        width: 8px;
-        height: 8px;
-        background: #6366f1;
-        border-radius: 50%;
-        animation: pulse 1.5s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 0.4; transform: scale(0.8); }
-        50% { opacity: 1; transform: scale(1); }
-    }
-    
-    /* Dashboard placeholder */
-    .dashboard-placeholder {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border: 2px dashed #cbd5e1;
-        border-radius: 16px;
-        padding: 3rem 2rem;
-        text-align: center;
-        margin: 1rem 0;
-    }
-    
-    .dashboard-placeholder-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-    }
-    
-    .dashboard-placeholder-text {
-        color: #64748b;
-        font-size: 0.95rem;
     }
     
     /* Scrollbar */
@@ -364,21 +290,16 @@ st.markdown("""
     div[data-testid="stToolbar"] {display: none;}
     div[data-testid="stDecoration"] {display: none;}
     
-    /* Selectbox styling */
-    .stSelectbox > div > div {
-        background: white !important;
-        border: 2px solid #e2e8f0 !important;
-        border-radius: 12px !important;
-        font-family: 'DM Sans', sans-serif !important;
+    /* Back button */
+    .back-btn {
+        background: #f1f5f9 !important;
+        color: #64748b !important;
+        box-shadow: none !important;
     }
     
-    .stSelectbox > div > div:focus {
-        border-color: #6366f1 !important;
-    }
-    
-    /* Add bottom padding for fixed input */
-    .main-content {
-        padding-bottom: 120px;
+    .back-btn:hover {
+        background: #e2e8f0 !important;
+        color: #475569 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -396,11 +317,14 @@ if "selected_dataset" not in st.session_state:
 if "dataset_summary" not in st.session_state:
     st.session_state.dataset_summary = None
 
-if "stats_data" not in st.session_state:
-    st.session_state.stats_data = None
+if "pending_question" not in st.session_state:
+    st.session_state.pending_question = None
 
-if "datasets_info" not in st.session_state:
-    st.session_state.datasets_info = None
+if "datasets_cache" not in st.session_state:
+    st.session_state.datasets_cache = None
+
+if "stats_cache" not in st.session_state:
+    st.session_state.stats_cache = {}
 
 # =============================================================================
 # GOOGLE SHEETS FUNCTIONS
@@ -522,7 +446,7 @@ def get_ai_response(user_question, dataset_name, stats):
 ## Response Format:
 - For text insights: Respond naturally with clear explanations
 - For charts: Include a JSON block with chart type and data
-- Always end with 2-3 suggested follow-up questions
+- Always end with EXACTLY 3 suggested follow-up questions (full questions, not truncated)
 
 ## Chart JSON Format (when charts are requested):
 ```json
@@ -535,11 +459,18 @@ def get_ai_response(user_question, dataset_name, stats):
 }}
 ```
 
+## Follow-up Questions Format:
+At the end of EVERY response, include this section:
+**Suggested follow-up questions:**
+1. [Full question here - do not truncate]
+2. [Full question here - do not truncate]  
+3. [Full question here - do not truncate]
+
 ## Important:
 - Be conversational and helpful
 - Highlight key insights and patterns
 - If you can't answer from the stats, say so
-- Suggest visualizations when relevant"""
+- Keep responses concise but informative"""
 
     messages = [{"role": "user", "content": user_question}]
     
@@ -547,7 +478,6 @@ def get_ai_response(user_question, dataset_name, stats):
 
 def parse_chart_from_response(response):
     """Extract chart JSON from AI response if present"""
-    # Look for JSON code block
     json_pattern = r'```json\s*(.*?)\s*```'
     matches = re.findall(json_pattern, response, re.DOTALL)
     
@@ -583,7 +513,6 @@ def create_chart(chart_data):
     else:
         fig = px.bar(x=labels, y=values, title=title)
     
-    # Apply consistent styling
     fig.update_layout(
         font_family="DM Sans",
         title_font_size=16,
@@ -597,20 +526,58 @@ def create_chart(chart_data):
     return fig
 
 def extract_followup_questions(response):
-    """Extract follow-up questions from AI response"""
+    """Extract follow-up questions from AI response - FULL TEXT, NO TRUNCATION"""
     questions = []
     lines = response.split('\n')
     
+    in_followup_section = False
     for line in lines:
         line = line.strip()
-        # Look for numbered questions or bullet points
-        if re.match(r'^[\d\.\-\*\•]\s*.*\?', line):
-            # Clean up the question
-            question = re.sub(r'^[\d\.\-\*\•]\s*', '', line).strip()
-            if len(question) > 10:
+        
+        # Detect start of follow-up section
+        if 'follow-up' in line.lower() or 'suggested' in line.lower():
+            in_followup_section = True
+            continue
+        
+        # Extract numbered questions
+        if in_followup_section and re.match(r'^[\d\.\)]\s*', line):
+            question = re.sub(r'^[\d\.\)]\s*', '', line).strip()
+            if len(question) > 10 and '?' in question:
                 questions.append(question)
     
-    return questions[:3]  # Return max 3 questions
+    # Fallback: look for any line ending with ?
+    if not questions:
+        for line in lines:
+            line = line.strip()
+            if line.endswith('?') and len(line) > 15:
+                clean = re.sub(r'^[\d\.\-\*\•\)]\s*', '', line).strip()
+                if clean not in questions:
+                    questions.append(clean)
+    
+    return questions[:3]
+
+def extract_key_stats(summary):
+    """Extract key statistics from summary text"""
+    key_stats = {}
+    
+    # Extract total records
+    total_match = re.search(r'([\d,]+)\s*(transactions|listings|records)', summary, re.IGNORECASE)
+    if total_match:
+        key_stats['total'] = total_match.group(1)
+        key_stats['total_label'] = total_match.group(2).title()
+    
+    # Extract average price
+    avg_match = re.search(r'Average\s*(?:price)?:?\s*\$?([\d,]+(?:/night)?)', summary, re.IGNORECASE)
+    if avg_match:
+        key_stats['avg_price'] = '$' + avg_match.group(1)
+    
+    # Extract price range
+    range_match = re.search(r'Price\s*range:?\s*\$?([\d,]+)\s*-\s*\$?([\d,]+)', summary, re.IGNORECASE)
+    if range_match:
+        key_stats['min_price'] = '$' + range_match.group(1)
+        key_stats['max_price'] = '$' + range_match.group(2)
+    
+    return key_stats
 
 # =============================================================================
 # UI COMPONENTS
@@ -626,33 +593,58 @@ def render_welcome_screen():
     </div>
     """, unsafe_allow_html=True)
 
-def render_dataset_cards(datasets):
-    """Render dataset selection cards"""
-    icons = {"sg_flat": "🏠", "nz_airbnb": "🏡"}
-    
-    cols = st.columns(2)
-    for i, dataset in enumerate(datasets):
-        with cols[i % 2]:
-            icon = icons.get(dataset['dataset_id'], '📊')
-            if st.button(
-                f"{icon} {dataset['dataset_name']}",
-                key=f"dataset_{dataset['dataset_id']}",
-                use_container_width=True
-            ):
-                st.session_state.selected_dataset = dataset['dataset_id']
-                st.session_state.dataset_summary = dataset['summary']
-                st.session_state.messages = []
-                st.rerun()
-
-def render_summary_card(dataset_name, summary):
-    """Render the dataset summary card"""
+def render_summary_sidebar(dataset_name, summary, key_stats):
+    """Render the summary in sidebar format"""
     st.markdown(f"""
-    <div class="summary-card">
-        <div class="summary-header">
-            <span class="summary-icon">📊</span>
-            <span class="summary-title">{dataset_name}</span>
+    <div class="summary-sidebar">
+        <div class="summary-sidebar-title">
+            📊 {dataset_name}
         </div>
-        <div class="summary-content">{summary}</div>
+    """, unsafe_allow_html=True)
+    
+    # Key stats boxes
+    if key_stats:
+        st.markdown('<div class="key-stats-grid">', unsafe_allow_html=True)
+        
+        if 'total' in key_stats:
+            st.markdown(f"""
+            <div class="key-stat-box">
+                <div class="key-stat-value">{key_stats['total']}</div>
+                <div class="key-stat-label">{key_stats.get('total_label', 'Records')}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        if 'avg_price' in key_stats:
+            st.markdown(f"""
+            <div class="key-stat-box">
+                <div class="key-stat-value">{key_stats['avg_price']}</div>
+                <div class="key-stat-label">Avg Price</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        if 'min_price' in key_stats:
+            st.markdown(f"""
+            <div class="key-stat-box">
+                <div class="key-stat-value">{key_stats['min_price']}</div>
+                <div class="key-stat-label">Min Price</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        if 'max_price' in key_stats:
+            st.markdown(f"""
+            <div class="key-stat-box">
+                <div class="key-stat-value">{key_stats['max_price']}</div>
+                <div class="key-stat-label">Max Price</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Summary bullets
+    st.markdown(f"""
+    <div class="summary-bullets">
+        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.6;">{summary}</p>
+    </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -661,25 +653,32 @@ def render_message(role, content):
     if role == "user":
         st.markdown(f'<div class="user-message">{content}</div>', unsafe_allow_html=True)
     else:
-        # Remove JSON code blocks from display
+        # Remove JSON code blocks and follow-up section from display
         display_content = re.sub(r'```json\s*.*?\s*```', '', content, flags=re.DOTALL)
-        display_content = display_content.strip()
         
-        # Convert markdown-style formatting
+        # Remove the follow-up questions section (we'll show them as buttons)
+        display_content = re.sub(r'\*\*Suggested follow-up.*', '', display_content, flags=re.DOTALL | re.IGNORECASE)
+        display_content = re.sub(r'Suggested follow-up.*', '', display_content, flags=re.DOTALL | re.IGNORECASE)
+        
+        display_content = display_content.strip()
         display_content = display_content.replace('\n', '<br>')
         
         st.markdown(f'<div class="assistant-message">{display_content}</div>', unsafe_allow_html=True)
 
-def render_suggestions(questions):
-    """Render follow-up question suggestions"""
-    if questions:
-        st.markdown('<div class="followup-title">Suggested questions</div>', unsafe_allow_html=True)
-        cols = st.columns(len(questions))
-        for i, q in enumerate(questions):
-            with cols[i]:
-                if st.button(q[:50] + "..." if len(q) > 50 else q, key=f"suggestion_{i}"):
-                    return q
-    return None
+def process_question(question, dataset_name, stats):
+    """Process a question and return the response"""
+    # Check if user is asking for dashboard
+    dashboard_keywords = ["dashboard", "interactive", "power bi", "powerbi", "full view", "explore data"]
+    if any(kw in question.lower() for kw in dashboard_keywords):
+        return """I'd love to show you the interactive dashboard! 
+
+🚧 **Dashboard Feature Coming Soon**
+
+The Power BI interactive dashboard integration is being set up. Once configured, you'll be able to explore the data with interactive filters and visualizations.
+
+In the meantime, I can help you with specific analysis or create charts for you."""
+    else:
+        return get_ai_response(question, dataset_name, stats)
 
 # =============================================================================
 # MAIN APP
@@ -689,9 +688,6 @@ def main():
     # Load datasets
     datasets = get_datasets()
     
-    # Main content area
-    st.markdown('<div class="main-content">', unsafe_allow_html=True)
-    
     # =========================================================================
     # SCREEN 1: Dataset Selection
     # =========================================================================
@@ -699,12 +695,27 @@ def main():
         render_welcome_screen()
         
         if datasets:
-            render_dataset_cards(datasets)
+            icons = {"sg_flat": "🏠", "nz_airbnb": "🏡"}
+            
+            cols = st.columns(2)
+            for i, dataset in enumerate(datasets):
+                with cols[i % 2]:
+                    icon = icons.get(dataset['dataset_id'], '📊')
+                    if st.button(
+                        f"{icon} {dataset['dataset_name']}",
+                        key=f"dataset_{dataset['dataset_id']}",
+                        use_container_width=True
+                    ):
+                        st.session_state.selected_dataset = dataset['dataset_id']
+                        st.session_state.dataset_summary = dataset['summary']
+                        st.session_state.messages = []
+                        st.session_state.pending_question = None
+                        st.rerun()
         else:
             st.warning("Unable to load datasets. Please check your Google Sheet configuration.")
     
     # =========================================================================
-    # SCREEN 2: Chat Interface
+    # SCREEN 2: Chat Interface with Sidebar Summary
     # =========================================================================
     else:
         # Get current dataset info
@@ -713,35 +724,66 @@ def main():
             None
         )
         
-        if current_dataset:
-            # Header with dataset name and back button
-            col1, col2 = st.columns([6, 1])
-            with col1:
-                st.markdown(f"### 📊 {current_dataset['dataset_name']}")
-            with col2:
-                if st.button("← Back"):
-                    st.session_state.selected_dataset = None
-                    st.session_state.messages = []
-                    st.rerun()
+        if not current_dataset:
+            st.error("Dataset not found")
+            return
+        
+        # Get stats
+        stats = get_stats(st.session_state.selected_dataset)
+        key_stats = extract_key_stats(current_dataset['summary'])
+        
+        # Process pending question if exists
+        if st.session_state.pending_question:
+            question = st.session_state.pending_question
+            st.session_state.pending_question = None
             
-            # Show summary if no messages yet
+            st.session_state.messages.append({"role": "user", "content": question})
+            
+            with st.spinner("Analyzing..."):
+                response = process_question(question, current_dataset['dataset_name'], stats)
+            
+            st.session_state.messages.append({"role": "assistant", "content": response})
+        
+        # Layout: Main chat area + Summary sidebar
+        col_main, col_sidebar = st.columns([2, 1])
+        
+        # ---------------------------------------------------------------------
+        # RIGHT SIDEBAR: Summary (always visible)
+        # ---------------------------------------------------------------------
+        with col_sidebar:
+            # Back button
+            if st.button("← Back to datasets", key="back_btn"):
+                st.session_state.selected_dataset = None
+                st.session_state.messages = []
+                st.session_state.pending_question = None
+                st.rerun()
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            render_summary_sidebar(
+                current_dataset['dataset_name'],
+                current_dataset['summary'],
+                key_stats
+            )
+        
+        # ---------------------------------------------------------------------
+        # MAIN AREA: Chat
+        # ---------------------------------------------------------------------
+        with col_main:
+            st.markdown(f"### 💬 Chat with your data")
+            
+            # If no messages, show initial suggestions
             if not st.session_state.messages:
-                render_summary_card(
-                    current_dataset['dataset_name'],
-                    current_dataset['summary']
-                )
-                
                 st.markdown("""
-                <div style="text-align: center; color: #64748b; margin: 2rem 0;">
-                    <p>What insights are you looking for?</p>
+                <div style="text-align: center; color: #64748b; margin: 2rem 0 1rem;">
+                    <p>What insights are you looking for? Try one of these:</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Initial suggestions
                 suggestions = [
                     "What are the key trends in this data?",
+                    "Which areas have the highest prices?",
                     "Show me a breakdown by category",
-                    "What are the highest and lowest values?",
                     "Create a chart comparing the main segments"
                 ]
                 
@@ -749,11 +791,11 @@ def main():
                 for i, sugg in enumerate(suggestions):
                     with cols[i % 2]:
                         if st.button(sugg, key=f"init_sugg_{i}", use_container_width=True):
-                            st.session_state.messages.append({"role": "user", "content": sugg})
+                            st.session_state.pending_question = sugg
                             st.rerun()
             
             # Display chat messages
-            for msg in st.session_state.messages:
+            for idx, msg in enumerate(st.session_state.messages):
                 render_message(msg["role"], msg["content"])
                 
                 # If assistant message, check for chart
@@ -764,79 +806,38 @@ def main():
                         st.plotly_chart(fig, use_container_width=True)
                     
                     # Show follow-up suggestions after last assistant message
-                    if msg == st.session_state.messages[-1]:
+                    if idx == len(st.session_state.messages) - 1:
                         followups = extract_followup_questions(msg["content"])
-                        selected = render_suggestions(followups)
-                        if selected:
-                            st.session_state.messages.append({"role": "user", "content": selected})
-                            st.rerun()
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # =========================================================================
-    # INPUT AREA (Fixed at bottom)
-    # =========================================================================
-    if st.session_state.selected_dataset:
-        st.markdown("---")
-        
-        col1, col2 = st.columns([6, 1])
-        
-        with col1:
-            user_input = st.text_area(
-                "Ask a question",
-                placeholder="Ask about the data, request insights, or ask for a chart...",
-                height=80,
-                label_visibility="collapsed",
-                key="user_input"
-            )
-        
-        with col2:
-            st.write("")  # Spacing
-            send_button = st.button("Send ➤", use_container_width=True)
-        
-        # Process user input
-        if send_button and user_input.strip():
-            # Add user message
-            st.session_state.messages.append({"role": "user", "content": user_input.strip()})
+                        
+                        if followups:
+                            st.markdown('<div class="section-title">Suggested follow-up questions</div>', unsafe_allow_html=True)
+                            
+                            for i, q in enumerate(followups):
+                                # Show FULL question text - no truncation
+                                if st.button(q, key=f"followup_{idx}_{i}", use_container_width=True):
+                                    st.session_state.pending_question = q
+                                    st.rerun()
             
-            # Get stats for current dataset
-            stats = get_stats(st.session_state.selected_dataset)
+            # Input area
+            st.markdown("---")
             
-            # Get current dataset name
-            current_dataset = next(
-                (d for d in datasets if d['dataset_id'] == st.session_state.selected_dataset),
-                {"dataset_name": "Dataset"}
-            )
+            col1, col2 = st.columns([5, 1])
             
-            # Check if user is asking for dashboard
-            dashboard_keywords = ["dashboard", "interactive", "power bi", "powerbi", "full view", "explore data"]
-            if any(kw in user_input.lower() for kw in dashboard_keywords):
-                # Dashboard request - placeholder for Make.com integration
-                response = """I'd love to show you the interactive dashboard! 
-
-🚧 **Dashboard Feature Coming Soon**
-
-The Power BI interactive dashboard integration is being set up. Once configured, you'll be able to:
-- Explore the data with interactive filters
-- Drill down into specific segments
-- View multiple visualizations simultaneously
-
-In the meantime, I can help you with:
-1. What specific analysis would you like to see?
-2. Would you like me to create a chart of any particular metric?
-3. What questions do you have about the data?"""
-            else:
-                # Regular question - call DeepSeek
-                with st.spinner("Analyzing..."):
-                    response = get_ai_response(
-                        user_input.strip(),
-                        current_dataset['dataset_name'],
-                        stats
-                    )
+            with col1:
+                user_input = st.text_area(
+                    "Ask a question",
+                    placeholder="Ask about the data, request insights, or ask for a chart...",
+                    height=80,
+                    label_visibility="collapsed",
+                    key="user_input"
+                )
             
-            # Add assistant response
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            st.rerun()
+            with col2:
+                st.write("")
+                if st.button("Send ➤", key="send_btn", use_container_width=True):
+                    if user_input.strip():
+                        st.session_state.pending_question = user_input.strip()
+                        st.rerun()
 
 if __name__ == "__main__":
     main()
