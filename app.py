@@ -4,7 +4,6 @@ import json
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
 import re
 
 # =============================================================================
@@ -24,15 +23,12 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* Import Google Font */
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
     
-    /* Hide Streamlit defaults */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Global styles */
     html, body, [class*="css"] {
         font-family: 'DM Sans', sans-serif;
     }
@@ -43,28 +39,13 @@ st.markdown("""
         margin: 0 auto;
     }
     
-    /* Background */
     .stApp {
         background: linear-gradient(180deg, #fafafa 0%, #f5f5f7 100%);
     }
     
-    /* Welcome header */
     .welcome-container {
         text-align: center;
         padding: 3rem 2rem 2rem;
-    }
-    
-    .welcome-icon {
-        width: 72px;
-        height: 72px;
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1.5rem;
-        font-size: 36px;
-        box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
     }
     
     .welcome-title {
@@ -72,7 +53,6 @@ st.markdown("""
         font-weight: 700;
         color: #1a1a2e;
         margin-bottom: 0.5rem;
-        letter-spacing: -0.02em;
     }
     
     .welcome-subtitle {
@@ -81,7 +61,6 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
-    /* Chat messages */
     .user-message {
         background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
         color: white;
@@ -94,7 +73,7 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
     }
     
-    .assistant-message {
+    .assistant-message-box {
         background: white;
         border: 1px solid #e2e8f0;
         padding: 1.25rem 1.5rem;
@@ -107,80 +86,6 @@ st.markdown("""
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     }
     
-    /* STICKY Summary sidebar */
-    .summary-sidebar {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 1.25rem;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-        position: sticky;
-        top: 1rem;
-        max-height: calc(100vh - 2rem);
-        overflow-y: auto;
-    }
-    
-    .summary-sidebar-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #1a1a2e;
-        margin-bottom: 1.25rem;
-        padding-bottom: 0.75rem;
-        border-bottom: 2px solid #f1f5f9;
-    }
-    
-    /* Stats row - 3 cards side by side */
-    .stats-row {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 1.25rem;
-    }
-    
-    .stat-card {
-        flex: 1;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 0.75rem 0.5rem;
-        text-align: center;
-    }
-    
-    .stat-icon {
-        font-size: 1.25rem;
-        margin-bottom: 0.25rem;
-    }
-    
-    .stat-value {
-        font-size: 1rem;
-        font-weight: 700;
-        color: #1a1a2e;
-        margin-bottom: 0.1rem;
-    }
-    
-    .stat-label {
-        font-size: 0.65rem;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-    }
-    
-    /* Summary bullets */
-    .summary-bullets {
-        font-size: 0.85rem;
-        color: #475569;
-        line-height: 1.7;
-    }
-    
-    .summary-bullets ul {
-        padding-left: 1.25rem;
-        margin: 0;
-    }
-    
-    .summary-bullets li {
-        margin-bottom: 0.6rem;
-    }
-    
-    /* Section title */
     .section-title {
         font-size: 0.8rem;
         font-weight: 600;
@@ -190,7 +95,6 @@ st.markdown("""
         margin: 1.5rem 0 0.75rem;
     }
     
-    /* Input label */
     .input-label {
         font-size: 0.85rem;
         font-weight: 500;
@@ -198,7 +102,6 @@ st.markdown("""
         margin-bottom: 0.5rem;
     }
     
-    /* Streamlit button overrides */
     .stButton > button {
         font-family: 'DM Sans', sans-serif !important;
         background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
@@ -208,7 +111,6 @@ st.markdown("""
         padding: 0.75rem 1.5rem !important;
         font-weight: 600 !important;
         font-size: 0.9rem !important;
-        transition: all 0.2s !important;
         box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
         white-space: normal !important;
         height: auto !important;
@@ -221,7 +123,6 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
     }
     
-    /* Input styling */
     .stTextArea textarea {
         font-family: 'DM Sans', sans-serif !important;
         border: 2px solid #e2e8f0 !important;
@@ -235,29 +136,9 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
     }
     
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 3px;
-    }
-    
-    /* Hide default streamlit elements */
     .stDeployButton {display: none;}
     div[data-testid="stToolbar"] {display: none;}
     div[data-testid="stDecoration"] {display: none;}
-    
-    /* Loading spinner override */
-    .stSpinner > div {
-        border-color: #6366f1 !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -283,7 +164,6 @@ if "pending_question" not in st.session_state:
 
 @st.cache_data(ttl=300)
 def load_google_sheet_data(sheet_id, tab_name):
-    """Load data from a public Google Sheet tab"""
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={tab_name}"
     try:
         df = pd.read_csv(url)
@@ -293,7 +173,6 @@ def load_google_sheet_data(sheet_id, tab_name):
         return None
 
 def get_datasets():
-    """Get list of datasets from Google Sheet"""
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Datasets")
@@ -304,7 +183,6 @@ def get_datasets():
     return []
 
 def get_stats(dataset_id):
-    """Get stats for a specific dataset"""
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Stats")
@@ -315,12 +193,23 @@ def get_stats(dataset_id):
         st.error(f"Error loading stats: {e}")
     return []
 
+def get_dashboards(dataset_id):
+    """Get dashboards for a specific dataset"""
+    try:
+        sheet_id = st.secrets["GOOGLE_SHEET_ID"]
+        df = load_google_sheet_data(sheet_id, "Dashboards")
+        if df is not None:
+            filtered = df[df['dataset_id'] == dataset_id]
+            return filtered.to_dict('records')
+    except Exception as e:
+        st.error(f"Error loading dashboards: {e}")
+    return []
+
 # =============================================================================
 # DEEPSEEK API FUNCTIONS
 # =============================================================================
 
 def call_deepseek(messages, system_prompt):
-    """Call DeepSeek API"""
     try:
         api_key = st.secrets["DEEPSEEK_API_KEY"]
         
@@ -350,7 +239,6 @@ def call_deepseek(messages, system_prompt):
         return f"Error calling DeepSeek: {str(e)}"
 
 def format_stats_for_prompt(stats):
-    """Format stats into a readable string for the AI prompt"""
     if not stats:
         return "No statistics available."
     
@@ -367,8 +255,6 @@ def format_stats_for_prompt(stats):
     return "\n".join(formatted)
 
 def get_ai_response(user_question, dataset_name, stats):
-    """Get AI response for a user question"""
-    
     stats_text = format_stats_for_prompt(stats)
     
     system_prompt = f"""You are an expert data analyst assistant helping users understand the "{dataset_name}" dataset.
@@ -380,12 +266,13 @@ def get_ai_response(user_question, dataset_name, stats):
 1. Answer questions using ONLY the statistics provided above
 2. Be specific - use actual numbers from the stats
 3. Provide actionable insights, not just facts
-4. If asked to create a chart, respond with a JSON code block containing chart specifications
 
-## Response Format:
-- Use proper formatting: **bold** for emphasis, bullet points for lists
-- For charts: Include a JSON block with chart type and data
-- Always end with EXACTLY 3 suggested follow-up questions
+## Response Format Rules:
+- Do NOT use markdown formatting like **bold** or *italic* - just use plain text
+- Use clear headings like "Key Insights:" on their own line
+- Use bullet points with "•" character for lists
+- Keep responses clear and readable without special formatting
+- If asked to create a chart, respond with a JSON code block
 
 ## Chart JSON Format (when charts are requested):
 ```json
@@ -399,29 +286,21 @@ def get_ai_response(user_question, dataset_name, stats):
 ```
 
 IMPORTANT FOR CHARTS:
-- Include ALL data points (don't skip any years, categories, etc.)
+- Include ALL data points
 - Make sure labels and values arrays have the same length
-- Use complete data from the statistics
 
-## Follow-up Questions Format:
-At the end of EVERY response, include:
----
-**Suggested follow-up questions:**
-1. [Full question here]
-2. [Full question here]
-3. [Full question here]
+## At the end of EVERY response, include exactly 3 follow-up questions like this:
+Follow-up questions:
+1. [question]
+2. [question]
+3. [question]
 
-## Important:
-- Be conversational and helpful
-- Highlight key insights and patterns
-- Keep responses concise but informative"""
+Keep responses concise but informative."""
 
     messages = [{"role": "user", "content": user_question}]
-    
     return call_deepseek(messages, system_prompt)
 
 def parse_chart_from_response(response):
-    """Extract chart JSON from AI response if present"""
     json_pattern = r'```json\s*(.*?)\s*```'
     matches = re.findall(json_pattern, response, re.DOTALL)
     
@@ -434,7 +313,6 @@ def parse_chart_from_response(response):
     return None
 
 def create_chart(chart_data):
-    """Create a Plotly chart from chart data"""
     chart_type = chart_data.get("chart_type", "bar")
     title = chart_data.get("title", "Chart")
     data = chart_data.get("data", {})
@@ -443,7 +321,6 @@ def create_chart(chart_data):
     x_label = chart_data.get("x_label", "")
     y_label = chart_data.get("y_label", "")
     
-    # Ensure we have data
     if not labels or not values:
         return None
     
@@ -455,9 +332,6 @@ def create_chart(chart_data):
         fig.update_layout(xaxis_title=x_label, yaxis_title=y_label)
     elif chart_type == "pie":
         fig = px.pie(names=labels, values=values, title=title)
-    elif chart_type == "scatter":
-        fig = px.scatter(x=labels, y=values, title=title)
-        fig.update_layout(xaxis_title=x_label, yaxis_title=y_label)
     else:
         fig = px.bar(x=labels, y=values, title=title)
     
@@ -474,7 +348,6 @@ def create_chart(chart_data):
     return fig
 
 def extract_followup_questions(response):
-    """Extract follow-up questions from AI response - clean, no leading dots or numbers"""
     questions = []
     lines = response.split('\n')
     
@@ -482,19 +355,15 @@ def extract_followup_questions(response):
     for line in lines:
         line = line.strip()
         
-        # Detect start of follow-up section
-        if 'follow-up' in line.lower() or 'suggested' in line.lower():
+        if 'follow-up' in line.lower() or 'follow up' in line.lower():
             in_followup_section = True
             continue
         
-        # Extract numbered questions
         if in_followup_section:
-            # Remove leading numbers, dots, dashes, etc.
             clean_line = re.sub(r'^[\d\.\)\-\*\•]+\s*', '', line).strip()
             if len(clean_line) > 10 and '?' in clean_line:
                 questions.append(clean_line)
     
-    # Fallback: look for any line ending with ?
     if not questions:
         for line in lines:
             line = line.strip()
@@ -506,58 +375,43 @@ def extract_followup_questions(response):
     return questions[:3]
 
 def clean_response_for_display(response):
-    """Clean response: remove JSON blocks and follow-up section"""
     # Remove JSON code blocks
     cleaned = re.sub(r'```json\s*.*?\s*```', '', response, flags=re.DOTALL)
     
-    # Remove the follow-up questions section (we'll show them as buttons)
-    cleaned = re.sub(r'---\s*\*\*Suggested follow-up.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
-    cleaned = re.sub(r'\*\*Suggested follow-up.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
+    # Remove follow-up section
+    cleaned = re.sub(r'Follow-up questions:.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     cleaned = re.sub(r'Suggested follow-up.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     
     return cleaned.strip()
 
 def extract_key_stats(summary, dataset_id):
-    """Extract key statistics from summary text"""
     key_stats = {}
     
-    # Extract total records
     total_match = re.search(r'([\d,]+)\s*(transactions|listings|records)', summary, re.IGNORECASE)
     if total_match:
         key_stats['total'] = total_match.group(1)
         key_stats['total_label'] = total_match.group(2).title()
     
-    # Extract average price
     avg_match = re.search(r'Average\s*(?:price)?:?\s*\$?([\d,]+(?:/night)?)', summary, re.IGNORECASE)
     if avg_match:
         key_stats['avg_price'] = '$' + avg_match.group(1)
     
-    # Extract max price
-    max_match = re.search(r'Max(?:imum)?\s*(?:price)?:?\s*\$?([\d,]+)', summary, re.IGNORECASE)
-    if not max_match:
-        # Try to get from price range
-        range_match = re.search(r'Price\s*range:?\s*\$?[\d,]+\s*-\s*\$?([\d,]+)', summary, re.IGNORECASE)
-        if range_match:
-            key_stats['max_price'] = '$' + range_match.group(1)
-    else:
-        key_stats['max_price'] = '$' + max_match.group(1)
+    range_match = re.search(r'Price\s*range:?\s*\$?[\d,]+\s*-\s*\$?([\d,]+)', summary, re.IGNORECASE)
+    if range_match:
+        key_stats['max_price'] = '$' + range_match.group(1)
     
     return key_stats
 
 def format_summary_as_bullets(summary):
-    """Convert summary paragraph into bullet points"""
     sentences = summary.split('.')
     bullets = []
-    
     for sentence in sentences:
         sentence = sentence.strip()
         if len(sentence) > 10:
             bullets.append(sentence)
-    
     return bullets
 
 def get_initial_suggestions(dataset_id):
-    """Get better initial suggestions based on dataset"""
     if dataset_id == "sg_flat":
         return [
             "Which towns have the highest and lowest prices?",
@@ -585,7 +439,6 @@ def get_initial_suggestions(dataset_id):
 # =============================================================================
 
 def main():
-    # Load datasets
     datasets = get_datasets()
     
     # =========================================================================
@@ -594,8 +447,7 @@ def main():
     if st.session_state.selected_dataset is None:
         st.markdown("""
         <div class="welcome-container">
-            <div class="welcome-icon">✨</div>
-            <div class="welcome-title">What do you want to analyze today?</div>
+            <div class="welcome-title">✨ What do you want to analyze today?</div>
             <div class="welcome-subtitle">Select a dataset to get started</div>
         </div>
         """, unsafe_allow_html=True)
@@ -621,10 +473,9 @@ def main():
             st.warning("Unable to load datasets. Please check your Google Sheet configuration.")
     
     # =========================================================================
-    # SCREEN 2: Chat Interface with Sidebar Summary
+    # SCREEN 2: Chat Interface
     # =========================================================================
     else:
-        # Get current dataset info
         current_dataset = next(
             (d for d in datasets if d['dataset_id'] == st.session_state.selected_dataset),
             None
@@ -634,75 +485,63 @@ def main():
             st.error("Dataset not found")
             return
         
-        # Get stats
         stats = get_stats(st.session_state.selected_dataset)
         key_stats = extract_key_stats(current_dataset['summary'], st.session_state.selected_dataset)
         summary_bullets = format_summary_as_bullets(current_dataset['summary'])
         initial_suggestions = get_initial_suggestions(st.session_state.selected_dataset)
         
-        # Layout: Main chat area + Summary sidebar
+        # Layout
         col_main, col_sidebar = st.columns([2, 1])
         
         # ---------------------------------------------------------------------
-        # RIGHT SIDEBAR: Summary (STICKY)
+        # RIGHT SIDEBAR
         # ---------------------------------------------------------------------
         with col_sidebar:
-            # Back button
             if st.button("← Back to datasets", key="back_btn"):
                 st.session_state.selected_dataset = None
                 st.session_state.messages = []
                 st.session_state.pending_question = None
                 st.rerun()
             
-            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("---")
             
-            # Sticky summary container
-            st.markdown(f"""
-            <div class="summary-sidebar">
-                <div class="summary-sidebar-title">
-                    📊 {current_dataset['dataset_name']}
-                </div>
-                
-                <div class="stats-row">
-                    <div class="stat-card">
-                        <div class="stat-icon">📊</div>
-                        <div class="stat-value">{key_stats.get('total', 'N/A')}</div>
-                        <div class="stat-label">{key_stats.get('total_label', 'Records')}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">💰</div>
-                        <div class="stat-value">{key_stats.get('avg_price', 'N/A')}</div>
-                        <div class="stat-label">Average</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📈</div>
-                        <div class="stat-value">{key_stats.get('max_price', 'N/A')}</div>
-                        <div class="stat-label">Maximum</div>
-                    </div>
-                </div>
-                
-                <div class="summary-bullets">
-                    <ul>
-            """, unsafe_allow_html=True)
+            # Dataset title
+            st.markdown(f"### 📊 {current_dataset['dataset_name']}")
             
-            for bullet in summary_bullets[:6]:  # Limit to 6 bullets
-                st.markdown(f"<li>{bullet}</li>", unsafe_allow_html=True)
+            # Stats using Streamlit metrics
+            stat_cols = st.columns(3)
+            with stat_cols[0]:
+                st.metric(
+                    label="Records",
+                    value=key_stats.get('total', 'N/A')
+                )
+            with stat_cols[1]:
+                st.metric(
+                    label="Average",
+                    value=key_stats.get('avg_price', 'N/A')
+                )
+            with stat_cols[2]:
+                st.metric(
+                    label="Maximum",
+                    value=key_stats.get('max_price', 'N/A')
+                )
             
-            st.markdown('</ul></div></div>', unsafe_allow_html=True)
+            st.markdown("---")
+            
+            # Summary bullets
+            st.markdown("**Key Facts:**")
+            for bullet in summary_bullets[:5]:
+                st.markdown(f"• {bullet}")
         
         # ---------------------------------------------------------------------
-        # MAIN AREA: Chat
+        # MAIN CHAT AREA
         # ---------------------------------------------------------------------
         with col_main:
-            st.markdown(f"### 💬 Chat with your data")
+            st.markdown("### 💬 Chat with your data")
             
-            # If no messages, show initial suggestions
+            # Initial suggestions
             if not st.session_state.messages:
-                st.markdown("""
-                <div style="text-align: center; color: #64748b; margin: 2rem 0 1rem;">
-                    <p>What insights are you looking for? Try one of these:</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown("What insights are you looking for? Try one of these:")
                 
                 cols = st.columns(2)
                 for i, sugg in enumerate(initial_suggestions):
@@ -711,46 +550,76 @@ def main():
                             st.session_state.pending_question = sugg
                             st.rerun()
             
-            # Display chat messages
+            # Chat messages
             for idx, msg in enumerate(st.session_state.messages):
                 if msg["role"] == "user":
                     st.markdown(f'<div class="user-message">{msg["content"]}</div>', unsafe_allow_html=True)
                 else:
-                    # Clean and render with proper markdown
                     cleaned_content = clean_response_for_display(msg["content"])
                     
-                    st.markdown(f'<div class="assistant-message">', unsafe_allow_html=True)
-                    st.markdown(cleaned_content)
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    # Check if response contains a dashboard embed
+                    dashboard_match = re.search(r'\[DASHBOARD:(.*?)\]', msg["content"])
                     
-                    # Check for chart
+                    if dashboard_match:
+                        embed_url = dashboard_match.group(1)
+                        # Remove the dashboard tag from display
+                        display_content = re.sub(r'\[DASHBOARD:.*?\]', '', cleaned_content).strip()
+                        
+                        st.markdown('<div class="assistant-message-box">', unsafe_allow_html=True)
+                        st.write(display_content.split('\n')[0])  # Show first line
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        
+                        # Render Power BI iframe
+                        st.markdown(f"""
+                        <iframe 
+                            title="Power BI Dashboard" 
+                            width="100%" 
+                            height="500" 
+                            src="{embed_url}" 
+                            frameborder="0" 
+                            allowFullScreen="true"
+                            style="border: 1px solid #e2e8f0; border-radius: 12px; margin: 1rem 0;">
+                        </iframe>
+                        """, unsafe_allow_html=True)
+                        
+                        # Show the rest of the message
+                        remaining_lines = '\n'.join(display_content.split('\n')[1:]).strip()
+                        remaining_lines = re.sub(r'Follow-up questions:.*', '', remaining_lines, flags=re.DOTALL | re.IGNORECASE).strip()
+                        if remaining_lines:
+                            st.write(remaining_lines)
+                    else:
+                        # Regular message without dashboard
+                        st.markdown('<div class="assistant-message-box">', unsafe_allow_html=True)
+                        st.write(cleaned_content)
+                        st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    # Chart
                     chart_data = parse_chart_from_response(msg["content"])
                     if chart_data:
                         fig = create_chart(chart_data)
                         if fig:
                             st.plotly_chart(fig, use_container_width=True)
                     
-                    # Show follow-up suggestions after last assistant message
+                    # Follow-up questions
                     if idx == len(st.session_state.messages) - 1:
                         followups = extract_followup_questions(msg["content"])
                         
                         if followups:
-                            st.markdown('<div class="section-title">Suggested follow-up questions</div>', unsafe_allow_html=True)
-                            
+                            st.markdown("**Suggested follow-up questions:**")
                             for i, q in enumerate(followups):
                                 if st.button(q, key=f"followup_{idx}_{i}", use_container_width=True):
                                     st.session_state.pending_question = q
                                     st.rerun()
             
-            # Input area with label
+            # Input area
             st.markdown("---")
-            st.markdown('<div class="input-label">Ask your own question</div>', unsafe_allow_html=True)
+            st.markdown("**Ask your own question:**")
             
             col1, col2 = st.columns([5, 1])
             
             with col1:
                 user_input = st.text_area(
-                    "Ask a question",
+                    "Question",
                     placeholder="Ask about the data, request insights, or ask for a chart...",
                     height=80,
                     label_visibility="collapsed",
@@ -765,33 +634,55 @@ def main():
                         st.rerun()
         
         # ---------------------------------------------------------------------
-        # PROCESS PENDING QUESTION
+        # PROCESS QUESTION
         # ---------------------------------------------------------------------
         if st.session_state.pending_question:
             question = st.session_state.pending_question
             st.session_state.pending_question = None
             
-            # Add user message
             st.session_state.messages.append({"role": "user", "content": question})
             
-            # Check if user is asking for dashboard
-            dashboard_keywords = ["dashboard", "interactive", "power bi", "powerbi", "full view", "explore data"]
+            dashboard_keywords = ["dashboard", "interactive", "power bi", "powerbi", "show dashboard", "view dashboard"]
             if any(kw in question.lower() for kw in dashboard_keywords):
-                response = """I'd love to show you the interactive dashboard! 
+                # Get first dashboard for this dataset
+                dashboards = get_dashboards(st.session_state.selected_dataset)
+                
+                if dashboards and len(dashboards) > 0:
+                    first_dashboard = dashboards[0]
+                    embed_url = first_dashboard.get('embed_url', '')
+                    dashboard_name = first_dashboard.get('dashboard_name', 'Dashboard')
+                    
+                    if embed_url and embed_url != 'REPLACE_WITH_YOUR_POWERBI_URL':
+                        response = f"""Here's the {dashboard_name} dashboard:
 
-🚧 **Dashboard Feature Coming Soon**
+[DASHBOARD:{embed_url}]
 
-The Power BI interactive dashboard integration is being set up. Once configured, you'll be able to explore the data with interactive filters and visualizations.
+You can interact with the filters and visualizations above.
 
-In the meantime, I can help you with specific analysis or create charts for you.
+Follow-up questions:
+1. What specific insights would you like from this view?
+2. Would you like me to explain any of the charts?
+3. Should I create a custom analysis based on what you see?"""
+                    else:
+                        response = """Dashboard URL not configured yet.
 
----
-**Suggested follow-up questions:**
+Please add your Power BI embed URL to the Google Sheet (Dashboards tab).
+
+Follow-up questions:
+1. What are the price trends over time?
+2. Which categories have the highest values?
+3. Can you create a comparison chart?"""
+                else:
+                    response = """No dashboards configured for this dataset yet.
+
+Please add dashboard information to the Google Sheet (Dashboards tab).
+
+Follow-up questions:
 1. What are the price trends over time?
 2. Which categories have the highest values?
 3. Can you create a comparison chart?"""
             else:
-                with st.spinner("🤔 Analyzing your question..."):
+                with st.spinner("Analyzing..."):
                     response = get_ai_response(question, current_dataset['dataset_name'], stats)
             
             st.session_state.messages.append({"role": "assistant", "content": response})
