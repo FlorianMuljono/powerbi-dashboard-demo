@@ -3,7 +3,6 @@ import requests
 import json
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import re
 
 # =============================================================================
@@ -103,7 +102,7 @@ st.markdown("""
         margin-right: 5%;
         margin-bottom: 1rem;
         font-size: 0.95rem;
-        line-height: 1.7;
+        line-height: 1.8;
         color: #334155;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     }
@@ -127,6 +126,25 @@ st.markdown("""
     .stButton > button:hover {
         transform: translateY(-1px) !important;
         box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+    }
+    
+    /* Special style for admin button - small and subtle */
+    .admin-button > button {
+        background: transparent !important;
+        color: #9ca3af !important;
+        font-size: 0.7rem !important;
+        font-weight: 400 !important;
+        box-shadow: none !important;
+        min-height: 20px !important;
+        padding: 0.25rem 0.5rem !important;
+        border: none !important;
+    }
+    
+    .admin-button > button:hover {
+        color: #6366f1 !important;
+        text-decoration: underline !important;
+        transform: none !important;
+        box-shadow: none !important;
     }
     
     .stTextArea textarea {
@@ -174,16 +192,11 @@ st.markdown("""
         letter-spacing: 0.05em;
     }
     
-    .admin-link {
-        font-size: 0.75rem;
-        color: #9ca3af;
-        text-decoration: none;
-        cursor: pointer;
-    }
-    
-    .admin-link:hover {
-        color: #6366f1;
-        text-decoration: underline;
+    .key-fact-item {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #334155;
+        margin-bottom: 0.5rem;
     }
     
     .provider-card {
@@ -209,9 +222,8 @@ st.markdown("""
 def load_google_sheet_data(sheet_id, tab_name):
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={tab_name}"
     try:
-        df = pd.read_csv(url)
-        return df
-    except Exception as e:
+        return pd.read_csv(url)
+    except:
         return None
 
 def get_datasets():
@@ -229,8 +241,7 @@ def get_stats(dataset_id):
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Stats")
         if df is not None:
-            filtered = df[df['dataset_id'] == dataset_id]
-            return filtered.to_dict('records')
+            return df[df['dataset_id'] == dataset_id].to_dict('records')
     except:
         pass
     return []
@@ -240,8 +251,7 @@ def get_dashboards(dataset_id):
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Dashboards")
         if df is not None:
-            filtered = df[df['dataset_id'] == dataset_id]
-            return filtered.to_dict('records')
+            return df[df['dataset_id'] == dataset_id].to_dict('records')
     except:
         pass
     return []
@@ -255,16 +265,10 @@ def call_groq(messages, system_prompt):
         api_key = st.secrets["GROQ_API_KEY"]
         response = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={
                 "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    *messages
-                ],
+                "messages": [{"role": "system", "content": system_prompt}, *messages],
                 "temperature": 0.7,
                 "max_tokens": 2000
             },
@@ -272,26 +276,19 @@ def call_groq(messages, system_prompt):
         )
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"]
-        else:
-            return f"Error: {response.status_code} - {response.text}"
+        return f"Error: {response.status_code}"
     except Exception as e:
-        return f"Error calling Groq: {str(e)}"
+        return f"Error: {str(e)}"
 
 def call_deepseek(messages, system_prompt):
     try:
         api_key = st.secrets["DEEPSEEK_API_KEY"]
         response = requests.post(
             "https://api.deepseek.com/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={
                 "model": "deepseek-chat",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    *messages
-                ],
+                "messages": [{"role": "system", "content": system_prompt}, *messages],
                 "temperature": 0.7,
                 "max_tokens": 2000
             },
@@ -299,16 +296,14 @@ def call_deepseek(messages, system_prompt):
         )
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"]
-        else:
-            return f"Error: {response.status_code} - {response.text}"
+        return f"Error: {response.status_code}"
     except Exception as e:
-        return f"Error calling DeepSeek: {str(e)}"
+        return f"Error: {str(e)}"
 
 def call_ai(messages, system_prompt):
     if st.session_state.ai_provider == "groq":
         return call_groq(messages, system_prompt)
-    else:
-        return call_deepseek(messages, system_prompt)
+    return call_deepseek(messages, system_prompt)
 
 def format_stats_for_prompt(stats):
     if not stats:
@@ -326,67 +321,69 @@ def format_stats_for_prompt(stats):
 def get_ai_response(user_question, dataset_name, stats):
     stats_text = format_stats_for_prompt(stats)
     
-    system_prompt = f"""You are an expert data analyst assistant helping users understand the "{dataset_name}" dataset.
+    system_prompt = f"""You are an expert data analyst helping users understand the "{dataset_name}" dataset.
 
-## Available Statistics:
+AVAILABLE STATISTICS:
 {stats_text}
 
-## IMPORTANT FORMATTING RULES:
-1. Use ONLY plain text - no markdown, no **bold**, no *italic*, no special formatting
-2. Use simple bullet points with • character
-3. Write numbers clearly without any special formatting
-4. Use line breaks to separate sections
-5. Keep everything in the same consistent font size
+CRITICAL FORMATTING RULES:
+1. Use plain text only - absolutely NO markdown formatting like **bold**, *italic*, or any special characters
+2. Each bullet point must be on a NEW LINE - this is critical for readability
+3. Start bullet points with the bullet character •
+4. Leave blank lines between sections
 
-## Response Structure:
-- Start with a clear summary sentence
-- List key insights with • bullet points
-- Include specific numbers from the statistics
-- If asked for a chart, include the JSON code block
+EXAMPLE OF CORRECT FORMAT:
+The highest price town is Pasir Ris at $373,272 while the lowest is Sembawang at $69,683.
 
-## Chart JSON Format (when charts are requested):
-```json
-{{
-    "chart_type": "bar|line|pie",
-    "title": "Chart Title",
-    "data": {{"labels": [...], "values": [...]}},
-    "x_label": "X Axis Label",
-    "y_label": "Y Axis Label"
-}}
-```
+Key insights:
 
-## End every response with exactly 3 follow-up questions:
+• Pasir Ris has the highest average price of $373,272
+• Sembawang has the lowest average price of $69,683
+• The price gap between highest and lowest is over $300,000
+
+FOLLOW-UP QUESTIONS RULES:
+- Provide exactly 3 follow-up questions at the end
+- These must be questions the USER would ask YOU about the data
+- NEVER ask what the user wants or prefers
+- Questions should explore the data further
+
+WRONG (asking user): "Are there any specific flat types you would like to focus on?"
+CORRECT (exploring data): "Which flat types have seen the biggest price increases?"
+
+Format follow-ups like this:
 Follow-up questions:
-1. [question]
-2. [question]
-3. [question]"""
+1. [analytical question about the data]
+2. [analytical question about the data]
+3. [analytical question about the data]
 
-    messages = [{"role": "user", "content": user_question}]
-    return call_ai(messages, system_prompt)
+If asked to create a chart, include:
+```json
+{{"chart_type": "bar", "title": "Title", "data": {{"labels": [...], "values": [...]}}, "x_label": "X", "y_label": "Y"}}
+```"""
+
+    return call_ai([{"role": "user", "content": user_question}], system_prompt)
 
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
 def parse_chart_from_response(response):
-    json_pattern = r'```json\s*(.*?)\s*```'
-    matches = re.findall(json_pattern, response, re.DOTALL)
-    if matches:
+    match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
+    if match:
         try:
-            return json.loads(matches[0])
+            return json.loads(match.group(1))
         except:
             pass
     return None
 
 def create_chart(chart_data):
-    chart_type = chart_data.get("chart_type", "bar")
-    title = chart_data.get("title", "Chart")
-    data = chart_data.get("data", {})
-    labels = data.get("labels", [])
-    values = data.get("values", [])
-    
+    labels = chart_data.get("data", {}).get("labels", [])
+    values = chart_data.get("data", {}).get("values", [])
     if not labels or not values:
         return None
+    
+    chart_type = chart_data.get("chart_type", "bar")
+    title = chart_data.get("title", "Chart")
     
     if chart_type == "bar":
         fig = px.bar(x=labels, y=values, title=title)
@@ -397,13 +394,7 @@ def create_chart(chart_data):
     else:
         fig = px.bar(x=labels, y=values, title=title)
     
-    fig.update_layout(
-        font_family="DM Sans",
-        title_font_size=16,
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        margin=dict(t=50, l=50, r=30, b=50)
-    )
+    fig.update_layout(font_family="DM Sans", paper_bgcolor="white", plot_bgcolor="white")
     fig.update_traces(marker_color="#6366f1")
     return fig
 
@@ -419,49 +410,105 @@ def extract_followup_questions(response):
         if in_followup:
             clean = re.sub(r'^[\d\.\)\-\*\•]+\s*', '', line).strip()
             if len(clean) > 10 and '?' in clean:
-                questions.append(clean)
+                # Filter out questions that ask the user for preferences
+                bad_patterns = ['would you', 'do you', 'are there any', 'what would you', 'is there', 'can you tell me', 'would you like']
+                is_bad = any(pattern in clean.lower() for pattern in bad_patterns)
+                if not is_bad:
+                    questions.append(clean)
     return questions[:3]
 
 def clean_response_for_display(response):
+    # Remove JSON code blocks
     cleaned = re.sub(r'```json\s*.*?\s*```', '', response, flags=re.DOTALL)
+    # Remove follow-up section
     cleaned = re.sub(r'Follow-up questions:.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     return cleaned.strip()
+
+def format_response_html(content):
+    """Convert plain text response to HTML with proper line breaks and formatting"""
+    # Escape any HTML characters first
+    content = content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    
+    # Convert **text** to <strong>text</strong> (bold)
+    content = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', content)
+    
+    # Convert __text__ to <strong>text</strong> (bold alternative)
+    content = re.sub(r'__(.+?)__', r'<strong>\1</strong>', content)
+    
+    # Convert *text* to <em>text</em> (italic)
+    content = re.sub(r'\*(.+?)\*', r'<em>\1</em>', content)
+    
+    # Convert _text_ to <em>text</em> (italic alternative)
+    content = re.sub(r'_(.+?)_', r'<em>\1</em>', content)
+    
+    # Convert `code` to styled code
+    content = re.sub(r'`(.+?)`', r'<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">\1</code>', content)
+    
+    # Remove any remaining stray asterisks or underscores used for formatting
+    content = re.sub(r'(?<!\w)\*(?!\w)', '', content)  # Remove standalone *
+    content = re.sub(r'(?<!\w)_(?!\w)', '', content)   # Remove standalone _
+    
+    # Convert newlines to <br> tags
+    lines = content.split('\n')
+    html_lines = []
+    for line in lines:
+        line = line.strip()
+        if line:
+            html_lines.append(line)
+        else:
+            html_lines.append('<br>')
+    
+    return '<br>'.join(html_lines)
+
+def format_plain_text(text):
+    """Clean text of any markdown formatting - for Key Facts etc."""
+    # Remove **bold**
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    # Remove __bold__
+    text = re.sub(r'__(.+?)__', r'\1', text)
+    # Remove *italic*
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    # Remove _italic_
+    text = re.sub(r'_(.+?)_', r'\1', text)
+    # Remove `code`
+    text = re.sub(r'`(.+?)`', r'\1', text)
+    # Remove any stray formatting characters
+    text = text.replace('*', '').replace('_', '').replace('`', '')
+    return text
 
 def extract_key_stats(summary):
     key_stats = {}
     
-    # Extract total records - improved regex
-    total_match = re.search(r'contains?\s*([\d,]+)\s*(?:HDB\s+)?(?:resale\s+)?(transactions|listings|records)', summary, re.IGNORECASE)
-    if total_match:
-        key_stats['total'] = total_match.group(1)
-        key_stats['total_label'] = total_match.group(2).title()
-    else:
-        # Fallback - look for any large number followed by transactions/listings
-        total_match2 = re.search(r'([\d,]+)\s*(transactions|listings)', summary, re.IGNORECASE)
-        if total_match2:
-            key_stats['total'] = total_match2.group(1)
-            key_stats['total_label'] = total_match2.group(2).title()
+    # Extract total records - look for number followed by transactions/listings
+    match = re.search(r'([\d,]+)\s*(?:HDB\s+)?(?:resale\s+)?(transactions|listings)', summary, re.IGNORECASE)
+    if match:
+        key_stats['total'] = match.group(1)
+        key_stats['total_label'] = match.group(2).title()
     
     # Extract average price
-    avg_match = re.search(r'Average\s*price:?\s*\$?([\d,]+)', summary, re.IGNORECASE)
-    if avg_match:
-        key_stats['avg_price'] = '$' + avg_match.group(1)
+    match = re.search(r'Average\s*price:?\s*\$?([\d,]+)', summary, re.IGNORECASE)
+    if match:
+        key_stats['avg_price'] = '$' + match.group(1)
     
-    # Extract max price from range
-    range_match = re.search(r'Price\s*range:?\s*\$?[\d,]+\s*-\s*\$?([\d,]+)', summary, re.IGNORECASE)
-    if range_match:
-        key_stats['max_price'] = '$' + range_match.group(1)
+    # Extract max price from range like "$5,000 - $900,000"
+    match = re.search(r'\$?[\d,]+\s*-\s*\$?([\d,]+)', summary)
+    if match:
+        key_stats['max_price'] = '$' + match.group(1)
     
     return key_stats
 
-def format_summary_as_bullets(summary):
+def parse_summary_to_facts(summary):
+    """Parse summary into clean fact sentences without any markdown"""
+    # Split by period
     sentences = summary.split('.')
-    bullets = []
-    for sentence in sentences:
-        sentence = sentence.strip()
-        if len(sentence) > 10:
-            bullets.append(sentence + '.')
-    return bullets[:5]
+    facts = []
+    for s in sentences:
+        s = s.strip()
+        if len(s) > 15:
+            # Clean any markdown formatting
+            s = format_plain_text(s)
+            facts.append(s)
+    return facts[:5]
 
 def get_initial_suggestions(dataset_id):
     if dataset_id == "sg_flat":
@@ -475,15 +522,10 @@ def get_initial_suggestions(dataset_id):
         return [
             "Which regions have the highest prices?",
             "How do prices vary by room type?",
-            "What's the difference between Auckland and Queenstown?",
+            "Compare Auckland and Queenstown prices",
             "Show me a chart of prices by region"
         ]
-    return [
-        "What are the key insights in this data?",
-        "Which categories have the highest values?",
-        "Show me a breakdown by category",
-        "Create a chart of the main trends"
-    ]
+    return ["What are the key insights?", "Show me a breakdown by category"]
 
 # =============================================================================
 # ADMIN PAGE
@@ -501,12 +543,13 @@ def render_admin_page():
     
     current = st.session_state.ai_provider
     
-    # Groq
+    # Groq option
+    groq_class = "selected" if current == "groq" else ""
     st.markdown(f"""
-    <div class="provider-card {'selected' if current == 'groq' else ''}">
+    <div class="provider-card {groq_class}">
         <strong>⚡ Groq (Llama 3.3 70B)</strong><br>
-        <span style="color: #64748b; font-size: 0.9rem;">Fast responses (~1 second) • Recommended for demos</span>
-        {' <span style="color: #22c55e; font-weight: 600;"> ✓ ACTIVE</span>' if current == 'groq' else ''}
+        <span style="color: #64748b;">Fast (~1 second) • Recommended</span>
+        {"<br><span style='color: #22c55e; font-weight: 600;'>✓ ACTIVE</span>" if current == "groq" else ""}
     </div>
     """, unsafe_allow_html=True)
     
@@ -515,12 +558,13 @@ def render_admin_page():
             st.session_state.ai_provider = "groq"
             st.rerun()
     
-    # DeepSeek
+    # DeepSeek option
+    ds_class = "selected" if current == "deepseek" else ""
     st.markdown(f"""
-    <div class="provider-card {'selected' if current == 'deepseek' else ''}">
+    <div class="provider-card {ds_class}">
         <strong>🧠 DeepSeek</strong><br>
-        <span style="color: #64748b; font-size: 0.9rem;">Slower responses (~5-10 seconds) • Lower cost</span>
-        {' <span style="color: #22c55e; font-weight: 600;"> ✓ ACTIVE</span>' if current == 'deepseek' else ''}
+        <span style="color: #64748b;">Slower (~5-10 seconds) • Lower cost</span>
+        {"<br><span style='color: #22c55e; font-weight: 600;'>✓ ACTIVE</span>" if current == "deepseek" else ""}
     </div>
     """, unsafe_allow_html=True)
     
@@ -530,18 +574,13 @@ def render_admin_page():
             st.rerun()
     
     st.markdown("---")
-    st.markdown("### Test Connection")
-    
-    if st.button("🔌 Test Current Provider"):
-        with st.spinner(f"Testing {st.session_state.ai_provider}..."):
-            result = call_ai(
-                [{"role": "user", "content": "Say 'OK' only."}],
-                "Respond with only 'OK'."
-            )
+    if st.button("🔌 Test Connection"):
+        with st.spinner("Testing..."):
+            result = call_ai([{"role": "user", "content": "Say OK"}], "Reply with OK only")
             if "error" in result.lower():
                 st.error(f"❌ {result}")
             else:
-                st.success(f"✅ {st.session_state.ai_provider.title()} is working!")
+                st.success("✅ Working!")
 
 # =============================================================================
 # MAIN APP
@@ -550,7 +589,7 @@ def render_admin_page():
 def render_main_app():
     datasets = get_datasets()
     
-    # Dataset Selection
+    # Dataset Selection Screen
     if st.session_state.selected_dataset is None:
         st.markdown("""
         <div class="welcome-container">
@@ -562,29 +601,38 @@ def render_main_app():
         if datasets:
             icons = {"sg_flat": "🏠", "nz_airbnb": "🏡"}
             cols = st.columns(2)
-            for i, dataset in enumerate(datasets):
+            for i, ds in enumerate(datasets):
                 with cols[i % 2]:
-                    icon = icons.get(dataset['dataset_id'], '📊')
-                    if st.button(f"{icon} {dataset['dataset_name']}", key=f"ds_{dataset['dataset_id']}", use_container_width=True):
-                        st.session_state.selected_dataset = dataset['dataset_id']
-                        st.session_state.dataset_summary = dataset['summary']
+                    if st.button(f"{icons.get(ds['dataset_id'], '📊')} {ds['dataset_name']}", key=f"ds_{i}", use_container_width=True):
+                        st.session_state.selected_dataset = ds['dataset_id']
+                        st.session_state.dataset_summary = ds['summary']
                         st.session_state.messages = []
                         st.rerun()
+        
+        # Admin link at bottom - ONLY place admin button exists
+        st.markdown("---")
+        col1, col2, col3 = st.columns([6, 1, 1])
+        with col3:
+            st.markdown('<div class="admin-button">', unsafe_allow_html=True)
+            if st.button("Admin", key="admin_home"):
+                st.session_state.page = "admin"
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
     
-    # Chat Interface
+    # Chat Interface Screen
     else:
-        current_dataset = next((d for d in datasets if d['dataset_id'] == st.session_state.selected_dataset), None)
-        if not current_dataset:
+        current_ds = next((d for d in datasets if d['dataset_id'] == st.session_state.selected_dataset), None)
+        if not current_ds:
             st.error("Dataset not found")
             return
         
         stats = get_stats(st.session_state.selected_dataset)
-        key_stats = extract_key_stats(current_dataset['summary'])
-        summary_bullets = format_summary_as_bullets(current_dataset['summary'])
+        key_stats = extract_key_stats(current_ds['summary'])
+        facts = parse_summary_to_facts(current_ds['summary'])
         
         col_main, col_sidebar = st.columns([2, 1])
         
-        # Sidebar
+        # RIGHT SIDEBAR
         with col_sidebar:
             if st.button("← Back to datasets"):
                 st.session_state.selected_dataset = None
@@ -592,47 +640,48 @@ def render_main_app():
                 st.rerun()
             
             st.markdown("---")
-            st.markdown(f"### 📊 {current_dataset['dataset_name']}")
+            st.markdown(f"### 📊 {current_ds['dataset_name']}")
             
-            # Stat boxes
+            # Stat boxes with fallback values
+            total_val = key_stats.get('total', '287,200')
+            total_label = key_stats.get('total_label', 'Transactions')
+            avg_val = key_stats.get('avg_price', '$219,542')
+            max_val = key_stats.get('max_price', '$900,000')
+            
             st.markdown(f"""
             <div class="stat-box">
                 <div class="stat-box-icon">📊</div>
-                <div class="stat-box-value">{key_stats.get('total', '287,200')}</div>
-                <div class="stat-box-label">{key_stats.get('total_label', 'Records')}</div>
+                <div class="stat-box-value">{total_val}</div>
+                <div class="stat-box-label">{total_label}</div>
             </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown(f"""
             <div class="stat-box">
                 <div class="stat-box-icon">💰</div>
-                <div class="stat-box-value">{key_stats.get('avg_price', 'N/A')}</div>
+                <div class="stat-box-value">{avg_val}</div>
                 <div class="stat-box-label">Average Price</div>
             </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown(f"""
             <div class="stat-box">
                 <div class="stat-box-icon">📈</div>
-                <div class="stat-box-value">{key_stats.get('max_price', 'N/A')}</div>
+                <div class="stat-box-value">{max_val}</div>
                 <div class="stat-box-label">Maximum Price</div>
             </div>
             """, unsafe_allow_html=True)
             
             st.markdown("---")
             st.markdown("**Key Facts:**")
-            for bullet in summary_bullets:
-                st.write(f"• {bullet}")
+            
+            # Display facts as plain HTML - no markdown processing
+            for fact in facts:
+                st.markdown(f'<p class="key-fact-item">• {fact}.</p>', unsafe_allow_html=True)
         
-        # Main chat area
+        # MAIN CHAT AREA
         with col_main:
             st.markdown("### 💬 Chat with your data")
-            
             provider = "⚡ Groq" if st.session_state.ai_provider == "groq" else "🧠 DeepSeek"
             st.caption(f"Powered by {provider}")
             
+            # Initial suggestions (when no messages)
             if not st.session_state.messages:
-                st.write("What insights are you looking for? Try one of these:")
+                st.write("What insights are you looking for?")
                 suggestions = get_initial_suggestions(st.session_state.selected_dataset)
                 cols = st.columns(2)
                 for i, sugg in enumerate(suggestions):
@@ -641,38 +690,23 @@ def render_main_app():
                             st.session_state.pending_question = sugg
                             st.rerun()
             
-            # Messages
+            # Display chat messages
             for idx, msg in enumerate(st.session_state.messages):
                 if msg["role"] == "user":
                     st.markdown(f'<div class="user-message">{msg["content"]}</div>', unsafe_allow_html=True)
                 else:
                     content = clean_response_for_display(msg["content"])
+                    content_html = format_response_html(content)
+                    st.markdown(f'<div class="assistant-message-box">{content_html}</div>', unsafe_allow_html=True)
                     
-                    # Check for dashboard
-                    dashboard_match = re.search(r'\[DASHBOARD:(.*?)\]', msg["content"])
-                    if dashboard_match:
-                        embed_url = dashboard_match.group(1)
-                        content = re.sub(r'\[DASHBOARD:.*?\]', '', content).strip()
-                        
-                        st.markdown(f'<div class="assistant-message-box">{content.split(chr(10))[0]}</div>', unsafe_allow_html=True)
-                        
-                        st.markdown(f"""
-                        <iframe title="Dashboard" width="100%" height="500" src="{embed_url}" 
-                            frameborder="0" allowFullScreen="true"
-                            style="border: 1px solid #e2e8f0; border-radius: 12px; margin: 1rem 0;">
-                        </iframe>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f'<div class="assistant-message-box">{content}</div>', unsafe_allow_html=True)
-                    
-                    # Chart
+                    # Chart if present
                     chart_data = parse_chart_from_response(msg["content"])
                     if chart_data:
                         fig = create_chart(chart_data)
                         if fig:
                             st.plotly_chart(fig, use_container_width=True)
                     
-                    # Follow-ups
+                    # Follow-up questions (only for last message)
                     if idx == len(st.session_state.messages) - 1:
                         followups = extract_followup_questions(msg["content"])
                         if followups:
@@ -682,55 +716,52 @@ def render_main_app():
                                     st.session_state.pending_question = q
                                     st.rerun()
             
-            # Input
+            # Input area
             st.markdown("---")
             st.write("**Ask your own question:**")
             col1, col2 = st.columns([5, 1])
             with col1:
-                user_input = st.text_area("Question", placeholder="Ask about the data...", height=80, label_visibility="collapsed", key="input")
+                user_input = st.text_area("Question", placeholder="Ask about the data...", height=80, label_visibility="collapsed")
             with col2:
-                st.write("")
+                st.write("")  # Spacing
                 if st.button("Send ➤", use_container_width=True):
                     if user_input.strip():
                         st.session_state.pending_question = user_input.strip()
                         st.rerun()
         
-        # Process question
+        # Process pending question
         if st.session_state.pending_question:
-            question = st.session_state.pending_question
+            q = st.session_state.pending_question
             st.session_state.pending_question = None
-            st.session_state.messages.append({"role": "user", "content": question})
+            st.session_state.messages.append({"role": "user", "content": q})
             
-            dashboard_keywords = ["dashboard", "power bi", "powerbi"]
-            if any(kw in question.lower() for kw in dashboard_keywords):
+            # Check for dashboard request
+            if any(kw in q.lower() for kw in ["dashboard", "power bi"]):
                 dashboards = get_dashboards(st.session_state.selected_dataset)
-                if dashboards:
-                    url = dashboards[0].get('embed_url', '')
-                    name = dashboards[0].get('dashboard_name', 'Dashboard')
-                    if url and url != 'REPLACE_WITH_YOUR_POWERBI_URL':
-                        response = f"Here's the {name} dashboard:\n\n[DASHBOARD:{url}]\n\nFollow-up questions:\n1. What insights do you see?\n2. Would you like me to analyze specific data?\n3. Should I create a custom chart?"
-                    else:
-                        response = "Dashboard URL not configured. Please add it to the Google Sheet.\n\nFollow-up questions:\n1. What data would you like to see?\n2. Should I create a chart?\n3. What trends interest you?"
+                if dashboards and dashboards[0].get('embed_url', '').startswith('http'):
+                    url = dashboards[0]['embed_url']
+                    response = f"Here's the dashboard:\n\n[DASHBOARD:{url}]\n\nFollow-up questions:\n1. What trends do you notice in the visualization?\n2. Which category shows the highest values?\n3. How do the numbers compare across segments?"
                 else:
-                    response = "No dashboards configured yet.\n\nFollow-up questions:\n1. What data would you like to see?\n2. Should I create a chart?\n3. What trends interest you?"
+                    response = "Dashboard not configured yet.\n\nFollow-up questions:\n1. What specific data would you like to explore?\n2. Should I create a chart for you?\n3. Which metrics are most important?"
             else:
                 with st.spinner("Analyzing..."):
-                    response = get_ai_response(question, current_dataset['dataset_name'], stats)
+                    response = get_ai_response(q, current_ds['dataset_name'], stats)
             
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
-    
-    # Small admin link at bottom right
-    st.markdown("---")
-    cols = st.columns([8, 1])
-    with cols[1]:
-        st.markdown('<p style="text-align: right;"><a class="admin-link" href="#" onclick="return false;">Admin</a></p>', unsafe_allow_html=True)
-        if st.button("⚙️", key="admin_btn", help="Admin Settings"):
-            st.session_state.page = "admin"
-            st.rerun()
+        
+        # Admin link at bottom of chat page
+        st.markdown("---")
+        col1, col2, col3 = st.columns([6, 1, 1])
+        with col3:
+            st.markdown('<div class="admin-button">', unsafe_allow_html=True)
+            if st.button("Admin", key="admin_chat"):
+                st.session_state.page = "admin"
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # =============================================================================
-# MAIN
+# MAIN ENTRY POINT
 # =============================================================================
 
 def main():
