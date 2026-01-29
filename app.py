@@ -18,6 +18,28 @@ st.set_page_config(
 )
 
 # =============================================================================
+# SESSION STATE
+# =============================================================================
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if "selected_dataset" not in st.session_state:
+    st.session_state.selected_dataset = None
+
+if "dataset_summary" not in st.session_state:
+    st.session_state.dataset_summary = None
+
+if "pending_question" not in st.session_state:
+    st.session_state.pending_question = None
+
+if "page" not in st.session_state:
+    st.session_state.page = "main"
+
+if "ai_provider" not in st.session_state:
+    st.session_state.ai_provider = "groq"  # Default to Groq
+
+# =============================================================================
 # CUSTOM CSS
 # =============================================================================
 
@@ -139,24 +161,99 @@ st.markdown("""
     .stDeployButton {display: none;}
     div[data-testid="stToolbar"] {display: none;}
     div[data-testid="stDecoration"] {display: none;}
+    
+    .admin-link {
+        position: fixed;
+        bottom: 10px;
+        right: 20px;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        cursor: pointer;
+        z-index: 1000;
+    }
+    
+    .admin-link:hover {
+        color: #6366f1;
+    }
+    
+    .stat-box {
+        background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);
+        border: 1px solid #c7d2fe;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .stat-box-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-box-value {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #4f46e5;
+        margin-bottom: 0.1rem;
+    }
+    
+    .stat-box-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .provider-card {
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .provider-card:hover {
+        border-color: #6366f1;
+    }
+    
+    .provider-card.selected {
+        border-color: #6366f1;
+        background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);
+    }
+    
+    .provider-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        margin-bottom: 0.25rem;
+    }
+    
+    .provider-desc {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background: #dcfce7;
+        color: #166534;
+    }
+    
+    .status-inactive {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
 </style>
 """, unsafe_allow_html=True)
-
-# =============================================================================
-# SESSION STATE
-# =============================================================================
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-if "selected_dataset" not in st.session_state:
-    st.session_state.selected_dataset = None
-
-if "dataset_summary" not in st.session_state:
-    st.session_state.dataset_summary = None
-
-if "pending_question" not in st.session_state:
-    st.session_state.pending_question = None
 
 # =============================================================================
 # GOOGLE SHEETS FUNCTIONS
@@ -194,7 +291,6 @@ def get_stats(dataset_id):
     return []
 
 def get_dashboards(dataset_id):
-    """Get dashboards for a specific dataset"""
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Dashboards")
@@ -206,10 +302,41 @@ def get_dashboards(dataset_id):
     return []
 
 # =============================================================================
-# DEEPSEEK API FUNCTIONS
+# AI API FUNCTIONS
 # =============================================================================
 
+def call_groq(messages, system_prompt):
+    """Call Groq API - Fast inference"""
+    try:
+        api_key = st.secrets["GROQ_API_KEY"]
+        
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    *messages
+                ],
+                "temperature": 0.7,
+                "max_tokens": 2000
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return response.json()["choices"][0]["message"]["content"]
+        else:
+            return f"Error: {response.status_code} - {response.text}"
+    except Exception as e:
+        return f"Error calling Groq: {str(e)}"
+
 def call_deepseek(messages, system_prompt):
+    """Call DeepSeek API - Cheaper but slower"""
     try:
         api_key = st.secrets["DEEPSEEK_API_KEY"]
         
@@ -237,6 +364,13 @@ def call_deepseek(messages, system_prompt):
             return f"Error: {response.status_code} - {response.text}"
     except Exception as e:
         return f"Error calling DeepSeek: {str(e)}"
+
+def call_ai(messages, system_prompt):
+    """Call the selected AI provider"""
+    if st.session_state.ai_provider == "groq":
+        return call_groq(messages, system_prompt)
+    else:
+        return call_deepseek(messages, system_prompt)
 
 def format_stats_for_prompt(stats):
     if not stats:
@@ -298,7 +432,11 @@ Follow-up questions:
 Keep responses concise but informative."""
 
     messages = [{"role": "user", "content": user_question}]
-    return call_deepseek(messages, system_prompt)
+    return call_ai(messages, system_prompt)
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
 
 def parse_chart_from_response(response):
     json_pattern = r'```json\s*(.*?)\s*```'
@@ -375,13 +513,9 @@ def extract_followup_questions(response):
     return questions[:3]
 
 def clean_response_for_display(response):
-    # Remove JSON code blocks
     cleaned = re.sub(r'```json\s*.*?\s*```', '', response, flags=re.DOTALL)
-    
-    # Remove follow-up section
     cleaned = re.sub(r'Follow-up questions:.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     cleaned = re.sub(r'Suggested follow-up.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
-    
     return cleaned.strip()
 
 def extract_key_stats(summary, dataset_id):
@@ -435,10 +569,88 @@ def get_initial_suggestions(dataset_id):
         ]
 
 # =============================================================================
-# MAIN APP
+# ADMIN PAGE
 # =============================================================================
 
-def main():
+def render_admin_page():
+    st.markdown("## ⚙️ Admin Settings")
+    st.markdown("---")
+    
+    # Back button
+    if st.button("← Back to App"):
+        st.session_state.page = "main"
+        st.rerun()
+    
+    st.markdown("### AI Provider")
+    st.markdown("Select which AI service to use for generating insights:")
+    
+    # Current status
+    current = st.session_state.ai_provider
+    
+    # Groq option
+    groq_selected = current == "groq"
+    st.markdown(f"""
+    <div class="provider-card {'selected' if groq_selected else ''}" style="{'border-color: #6366f1; background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);' if groq_selected else ''}">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div class="provider-name">⚡ Groq (Llama 3.3 70B)</div>
+                <div class="provider-desc">Fast responses (~1 second) • Recommended for demos</div>
+            </div>
+            <span class="status-badge {'status-active' if groq_selected else 'status-inactive'}">
+                {'ACTIVE' if groq_selected else 'Inactive'}
+            </span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button("Select Groq", key="select_groq", disabled=groq_selected):
+        st.session_state.ai_provider = "groq"
+        st.success("✅ Switched to Groq!")
+        st.rerun()
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # DeepSeek option
+    deepseek_selected = current == "deepseek"
+    st.markdown(f"""
+    <div class="provider-card {'selected' if deepseek_selected else ''}" style="{'border-color: #6366f1; background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);' if deepseek_selected else ''}">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div class="provider-name">🧠 DeepSeek</div>
+                <div class="provider-desc">Slower responses (~5-10 seconds) • Lower cost</div>
+            </div>
+            <span class="status-badge {'status-active' if deepseek_selected else 'status-inactive'}">
+                {'ACTIVE' if deepseek_selected else 'Inactive'}
+            </span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button("Select DeepSeek", key="select_deepseek", disabled=deepseek_selected):
+        st.session_state.ai_provider = "deepseek"
+        st.success("✅ Switched to DeepSeek!")
+        st.rerun()
+    
+    st.markdown("---")
+    
+    # Connection test
+    st.markdown("### Test Connection")
+    if st.button("🔌 Test Current Provider"):
+        with st.spinner(f"Testing {st.session_state.ai_provider}..."):
+            test_messages = [{"role": "user", "content": "Say 'Connection successful!' in exactly those words."}]
+            result = call_ai(test_messages, "You are a helpful assistant. Respond briefly.")
+            
+            if "error" in result.lower():
+                st.error(f"❌ {result}")
+            else:
+                st.success(f"✅ {st.session_state.ai_provider.title()} is working!")
+                st.info(f"Response: {result[:100]}...")
+
+# =============================================================================
+# MAIN APP PAGE
+# =============================================================================
+
+def render_main_app():
     datasets = get_datasets()
     
     # =========================================================================
@@ -508,23 +720,30 @@ def main():
             # Dataset title
             st.markdown(f"### 📊 {current_dataset['dataset_name']}")
             
-            # Stats using Streamlit metrics
-            stat_cols = st.columns(3)
-            with stat_cols[0]:
-                st.metric(
-                    label="Records",
-                    value=key_stats.get('total', 'N/A')
-                )
-            with stat_cols[1]:
-                st.metric(
-                    label="Average",
-                    value=key_stats.get('avg_price', 'N/A')
-                )
-            with stat_cols[2]:
-                st.metric(
-                    label="Maximum",
-                    value=key_stats.get('max_price', 'N/A')
-                )
+            # Three stat boxes
+            st.markdown(f"""
+            <div class="stat-box">
+                <div class="stat-box-icon">📊</div>
+                <div class="stat-box-value">{key_stats.get('total', 'N/A')}</div>
+                <div class="stat-box-label">{key_stats.get('total_label', 'Records')}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown(f"""
+            <div class="stat-box">
+                <div class="stat-box-icon">💰</div>
+                <div class="stat-box-value">{key_stats.get('avg_price', 'N/A')}</div>
+                <div class="stat-box-label">Average Price</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown(f"""
+            <div class="stat-box">
+                <div class="stat-box-icon">📈</div>
+                <div class="stat-box-value">{key_stats.get('max_price', 'N/A')}</div>
+                <div class="stat-box-label">Maximum Price</div>
+            </div>
+            """, unsafe_allow_html=True)
             
             st.markdown("---")
             
@@ -538,6 +757,11 @@ def main():
         # ---------------------------------------------------------------------
         with col_main:
             st.markdown("### 💬 Chat with your data")
+            
+            # Show current AI provider
+            provider_emoji = "⚡" if st.session_state.ai_provider == "groq" else "🧠"
+            provider_name = "Groq" if st.session_state.ai_provider == "groq" else "DeepSeek"
+            st.caption(f"{provider_emoji} Powered by {provider_name}")
             
             # Initial suggestions
             if not st.session_state.messages:
@@ -562,11 +786,10 @@ def main():
                     
                     if dashboard_match:
                         embed_url = dashboard_match.group(1)
-                        # Remove the dashboard tag from display
                         display_content = re.sub(r'\[DASHBOARD:.*?\]', '', cleaned_content).strip()
                         
                         st.markdown('<div class="assistant-message-box">', unsafe_allow_html=True)
-                        st.write(display_content.split('\n')[0])  # Show first line
+                        st.write(display_content.split('\n')[0])
                         st.markdown('</div>', unsafe_allow_html=True)
                         
                         # Render Power BI iframe
@@ -582,13 +805,11 @@ def main():
                         </iframe>
                         """, unsafe_allow_html=True)
                         
-                        # Show the rest of the message
                         remaining_lines = '\n'.join(display_content.split('\n')[1:]).strip()
                         remaining_lines = re.sub(r'Follow-up questions:.*', '', remaining_lines, flags=re.DOTALL | re.IGNORECASE).strip()
                         if remaining_lines:
                             st.write(remaining_lines)
                     else:
-                        # Regular message without dashboard
                         st.markdown('<div class="assistant-message-box">', unsafe_allow_html=True)
                         st.write(cleaned_content)
                         st.markdown('</div>', unsafe_allow_html=True)
@@ -644,7 +865,6 @@ def main():
             
             dashboard_keywords = ["dashboard", "interactive", "power bi", "powerbi", "show dashboard", "view dashboard"]
             if any(kw in question.lower() for kw in dashboard_keywords):
-                # Get first dashboard for this dataset
                 dashboards = get_dashboards(st.session_state.selected_dataset)
                 
                 if dashboards and len(dashboards) > 0:
@@ -687,6 +907,24 @@ Follow-up questions:
             
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
+    
+    # Admin link at bottom
+    st.markdown("---")
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col3:
+        if st.button("⚙️ Admin", key="admin_link"):
+            st.session_state.page = "admin"
+            st.rerun()
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+def main():
+    if st.session_state.page == "admin":
+        render_admin_page()
+    else:
+        render_main_app()
 
 if __name__ == "__main__":
     main()
