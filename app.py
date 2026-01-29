@@ -695,9 +695,37 @@ def render_main_app():
                 if msg["role"] == "user":
                     st.markdown(f'<div class="user-message">{msg["content"]}</div>', unsafe_allow_html=True)
                 else:
-                    content = clean_response_for_display(msg["content"])
-                    content_html = format_response_html(content)
-                    st.markdown(f'<div class="assistant-message-box">{content_html}</div>', unsafe_allow_html=True)
+                    content = msg["content"]
+                    
+                    # Check for dashboard embed
+                    dashboard_match = re.search(r'\[DASHBOARD:(.*?)\]', content)
+                    
+                    if dashboard_match:
+                        embed_url = dashboard_match.group(1)
+                        # Remove the dashboard tag from content
+                        content_clean = re.sub(r'\[DASHBOARD:.*?\]', '', content)
+                        content_clean = clean_response_for_display(content_clean)
+                        content_html = format_response_html(content_clean)
+                        
+                        # Show text message
+                        st.markdown(f'<div class="assistant-message-box">{content_html}</div>', unsafe_allow_html=True)
+                        
+                        # Render Power BI iframe
+                        st.markdown(f"""
+                        <iframe 
+                            title="Power BI Dashboard" 
+                            width="100%" 
+                            height="500" 
+                            src="{embed_url}" 
+                            frameborder="0" 
+                            allowFullScreen="true"
+                            style="border: 1px solid #e2e8f0; border-radius: 12px; margin: 1rem 0;">
+                        </iframe>
+                        """, unsafe_allow_html=True)
+                    else:
+                        content_clean = clean_response_for_display(content)
+                        content_html = format_response_html(content_clean)
+                        st.markdown(f'<div class="assistant-message-box">{content_html}</div>', unsafe_allow_html=True)
                     
                     # Chart if present
                     chart_data = parse_chart_from_response(msg["content"])
