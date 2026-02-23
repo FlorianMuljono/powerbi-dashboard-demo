@@ -231,6 +231,9 @@ def get_datasets():
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Datasets")
         if df is not None:
+            # Filter only active datasets if column exists
+            if 'active' in df.columns:
+                df = df[df['active'].astype(str).str.upper() == 'TRUE']
             return df.to_dict('records')
     except:
         pass
@@ -518,12 +521,12 @@ def get_initial_suggestions(dataset_id):
             "Show me the price trend from 1990 to 1999",
             "What floor levels command the highest prices?"
         ]
-    elif dataset_id == "nz_airbnb":
+    elif dataset_id == "hdb_insights":
         return [
-            "Which regions have the highest prices?",
-            "How do prices vary by room type?",
-            "Compare Auckland and Queenstown prices",
-            "Show me a chart of prices by region"
+            "Which towns have the highest and lowest prices?",
+            "How do prices vary by flat type?",
+            "Show me the price trend from 2017 to 2025",
+            "What are the key market insights?"
         ]
     return ["What are the key insights?", "Show me a breakdown by category"]
 
@@ -599,7 +602,7 @@ def render_main_app():
         """, unsafe_allow_html=True)
         
         if datasets:
-            icons = {"sg_flat": "🏠", "nz_airbnb": "🏡"}
+            icons = {"sg_flat": "🏠", "hdb_insights": "📊"}
             cols = st.columns(2)
             for i, ds in enumerate(datasets):
                 with cols[i % 2]:
@@ -763,14 +766,52 @@ def render_main_app():
             st.session_state.pending_question = None
             st.session_state.messages.append({"role": "user", "content": q})
             
-            # Check for dashboard request
-            if any(kw in q.lower() for kw in ["dashboard", "power bi"]):
+            # Check for dashboard request - MUST include "dashboard" or "power bi"
+            if any(kw in q.lower() for kw in ["dashboard", "power bi", "powerbi"]):
                 dashboards = get_dashboards(st.session_state.selected_dataset)
-                if dashboards and dashboards[0].get('embed_url', '').startswith('http'):
-                    url = dashboards[0]['embed_url']
-                    response = f"Here's the dashboard:\n\n[DASHBOARD:{url}]\n\nFollow-up questions:\n1. What trends do you notice in the visualization?\n2. Which category shows the highest values?\n3. How do the numbers compare across segments?"
+                
+                if dashboards:
+                    # Find best matching dashboard based on keywords
+                    best_match = None
+                    best_score = 0
+                    q_lower = q.lower()
+                    
+                    for dash in dashboards:
+                        keywords = dash.get('keywords', '').lower().split(',')
+                        keywords = [k.strip() for k in keywords]
+                        
+                        # Count how many keywords match
+                        score = 0
+                        for keyword in keywords:
+                            if keyword and keyword in q_lower:
+                                # Longer keyword matches = higher score
+                                score += len(keyword)
+                        
+                        if score > best_score:
+                            best_score = score
+                            best_match = dash
+                    
+                    # If no keyword match, default to Overview (first) dashboard
+                    if not best_match:
+                        # Look for overview dashboard first
+                        for dash in dashboards:
+                            if 'overview' in dash.get('dashboard_name', '').lower():
+                                best_match = dash
+                                break
+                        # If no overview, use first dashboard
+                        if not best_match:
+                            best_match = dashboards[0]
+                    
+                    url = best_match.get('embed_url', '')
+                    name = best_match.get('dashboard_name', 'Dashboard')
+                    description = best_match.get('description', '')
+                    
+                    if url and url.startswith('http'):
+                        response = f"Here's the {name} dashboard:\n\n{description}\n\n[DASHBOARD:{url}]\n\nFollow-up questions:\n1. What trends do you notice in this visualization?\n2. Would you like to see a different dashboard (Town, Flat Type, Trends, or Storey analysis)?\n3. Should I explain any specific insight from this view?"
+                    else:
+                        response = f"The {name} dashboard URL is not configured yet.\n\nPlease add the Power BI embed URL to the Google Sheet.\n\nFollow-up questions:\n1. What specific data would you like to explore?\n2. Should I create a chart for you?\n3. Which metrics are most important?"
                 else:
-                    response = "Dashboard not configured yet.\n\nFollow-up questions:\n1. What specific data would you like to explore?\n2. Should I create a chart for you?\n3. Which metrics are most important?"
+                    response = "No dashboards configured for this dataset yet.\n\nFollow-up questions:\n1. What specific data would you like to explore?\n2. Should I create a chart for you?\n3. Which metrics are most important?"
             else:
                 with st.spinner("Analyzing..."):
                     response = get_ai_response(q, current_ds['dataset_name'], stats)
