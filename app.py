@@ -488,15 +488,20 @@ def extract_key_stats(summary):
         key_stats['total'] = match.group(1)
         key_stats['total_label'] = match.group(2).title()
     
-    # Extract average price
-    match = re.search(r'Average\s*price:?\s*\$?([\d,]+)', summary, re.IGNORECASE)
+    # Extract average price - look for "Average price: $X" or "Average: $X"
+    match = re.search(r'Average\s*(?:price)?:?\s*\$?([\d,]+)', summary, re.IGNORECASE)
     if match:
         key_stats['avg_price'] = '$' + match.group(1)
     
-    # Extract max price from range like "$5,000 - $900,000"
-    match = re.search(r'\$?[\d,]+\s*-\s*\$?([\d,]+)', summary)
+    # Extract max price - look for "Maximum price: $X" or "Max: $X" or price range ending
+    match = re.search(r'Maximum\s*(?:price)?:?\s*\$?([\d,]+)', summary, re.IGNORECASE)
     if match:
         key_stats['max_price'] = '$' + match.group(1)
+    else:
+        # Fallback: look for price range like "$140,000 - $1,658,888"
+        match = re.search(r'\$[\d,]+\s*-\s*\$([\d,]+)', summary)
+        if match:
+            key_stats['max_price'] = '$' + match.group(1)
     
     return key_stats
 
