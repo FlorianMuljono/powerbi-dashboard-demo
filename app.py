@@ -757,7 +757,7 @@ def render_main_app():
             st.write("**Ask your own question:**")
             col1, col2 = st.columns([5, 1])
             with col1:
-                user_input = st.text_area("Question", placeholder="Ask about the data...", height=80, label_visibility="collapsed")
+                user_input = st.text_area("Question", placeholder="Ask about the data...", height=80, label_visibility="collapsed", key=f"input_{len(st.session_state.messages)}")
             with col2:
                 st.write("")  # Spacing
                 if st.button("Send ➤", use_container_width=True):
