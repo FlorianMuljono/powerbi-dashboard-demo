@@ -218,7 +218,7 @@ st.markdown("""
 # GOOGLE SHEETS FUNCTIONS
 # =============================================================================
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=60)
 def load_google_sheet_data(sheet_id, tab_name):
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={tab_name}"
     try:
