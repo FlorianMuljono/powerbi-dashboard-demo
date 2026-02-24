@@ -242,31 +242,29 @@ def get_datasets():
     return []
 
 def get_stats(dataset_id):
-    try:
-        sheet_id = st.secrets["GOOGLE_SHEET_ID"]
-        df = load_google_sheet_data(sheet_id, "Stats")
-        if df is not None and len(df) > 0:
-            # Debug: print columns
-            cols = list(df.columns)
-            
-            # Try exact match first
-            if 'dataset_id' in cols:
-                filtered = df[df['dataset_id'] == dataset_id]
-                if len(filtered) > 0:
-                    return filtered.to_dict('records')
-            
-            # Try first column as dataset_id
-            first_col = cols[0]
-            filtered = df[df[first_col] == dataset_id]
-            if len(filtered) > 0:
-                return filtered.to_dict('records')
-                
-            # Try case-insensitive match on first column
-            filtered = df[df[first_col].astype(str).str.lower() == dataset_id.lower()]
-            if len(filtered) > 0:
-                return filtered.to_dict('records')
-    except Exception as e:
-        pass
+    # HARDCODED STATS - Google Sheets not working reliably
+    if dataset_id == "hdb_insights":
+        return [
+            {"stat_category": "overview", "stat_name": "Total Transactions", "stat_value": "209701"},
+            {"stat_category": "overview", "stat_name": "Average Price", "stat_value": "$516,669"},
+            {"stat_category": "overview", "stat_name": "Year Range", "stat_value": "2017-2025"},
+            {"stat_category": "town", "stat_name": "BUKIT TIMAH (Highest)", "stat_value": "$765,735"},
+            {"stat_category": "town", "stat_name": "BISHAN", "stat_value": "$699,962"},
+            {"stat_category": "town", "stat_name": "CENTRAL AREA", "stat_value": "$680,448"},
+            {"stat_category": "town", "stat_name": "QUEENSTOWN", "stat_value": "$628,550"},
+            {"stat_category": "town", "stat_name": "YISHUN (Lowest)", "stat_value": "$442,616"},
+            {"stat_category": "town", "stat_name": "WOODLANDS", "stat_value": "$469,841"},
+            {"stat_category": "town", "stat_name": "JURONG WEST", "stat_value": "$455,159"},
+            {"stat_category": "flat_type", "stat_name": "EXECUTIVE", "stat_value": "$721,612"},
+            {"stat_category": "flat_type", "stat_name": "5 ROOM", "stat_value": "$614,580"},
+            {"stat_category": "flat_type", "stat_name": "4 ROOM", "stat_value": "$519,624"},
+            {"stat_category": "flat_type", "stat_name": "3 ROOM", "stat_value": "$365,873"},
+            {"stat_category": "flat_type", "stat_name": "2 ROOM", "stat_value": "$293,217"},
+            {"stat_category": "price_trends", "stat_name": "2017", "stat_value": "$443,889"},
+            {"stat_category": "price_trends", "stat_name": "2020", "stat_value": "$452,279"},
+            {"stat_category": "price_trends", "stat_name": "2023", "stat_value": "$571,806"},
+            {"stat_category": "price_trends", "stat_name": "2025", "stat_value": "$648,498"},
+        ]
     return []
 
 def get_dashboards(dataset_id):
@@ -389,20 +387,24 @@ def get_value_based_colors(values, color_light='#c7d2fe', color_dark='#4f46e5'):
     """
     Universal function to generate colors based on values.
     Lower values = lighter colors, Higher values = darker colors.
-    Works for any chart type.
     """
     if not values:
-        return []
+        return [color_dark]
+    
+    # Flatten if nested list
+    if isinstance(values, list) and len(values) > 0 and isinstance(values[0], list):
+        values = values[0]
     
     # Convert all values to float, handle any non-numeric
-    try:
-        numeric_values = [float(v) for v in values]
-    except (ValueError, TypeError):
-        # If conversion fails, return default color for all
-        return [color_dark] * len(values)
+    numeric_values = []
+    for v in values:
+        try:
+            numeric_values.append(float(v))
+        except (ValueError, TypeError):
+            numeric_values.append(0)
     
     if len(numeric_values) == 0:
-        return []
+        return [color_dark]
     
     if len(numeric_values) == 1:
         return [color_dark]
@@ -417,9 +419,7 @@ def get_value_based_colors(values, color_light='#c7d2fe', color_dark='#4f46e5'):
     
     colors = []
     for v in numeric_values:
-        # Normalize value between 0 and 1
         ratio = (v - min_val) / val_range
-        # Interpolate between light and dark
         r = int(light_r + (dark_r - light_r) * ratio)
         g = int(light_g + (dark_g - light_g) * ratio)
         b = int(light_b + (dark_b - light_b) * ratio)
