@@ -244,9 +244,10 @@ def get_stats(dataset_id):
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Stats")
         if df is not None:
-            return df[df['dataset_id'] == dataset_id].to_dict('records')
-    except:
-        pass
+            filtered = df[df['dataset_id'] == dataset_id].to_dict('records')
+            return filtered
+    except Exception as e:
+        st.error(f"Error loading stats: {e}")
     return []
 
 def get_dashboards(dataset_id):
@@ -311,56 +312,36 @@ def call_ai(messages, system_prompt):
 def format_stats_for_prompt(stats):
     if not stats:
         return "No statistics available."
+    
     formatted = []
     current_category = None
     for stat in stats:
         category = stat.get('stat_category', 'general')
         if category != current_category:
             current_category = category
-            formatted.append(f"\n## {category.upper()}")
-        formatted.append(f"- {stat.get('stat_name', 'N/A')}: {stat.get('stat_value', 'N/A')}")
+            formatted.append(f"\n{category.upper()}:")
+        formatted.append(f"  {stat.get('stat_name', 'N/A')}: {stat.get('stat_value', 'N/A')}")
     return "\n".join(formatted)
 
 def get_ai_response(user_question, dataset_name, stats):
     stats_text = format_stats_for_prompt(stats)
     
-    system_prompt = f"""You are an expert data analyst helping users understand the "{dataset_name}" dataset.
+    system_prompt = f"""You are a helpful data analyst. Answer questions about the "{dataset_name}" dataset using ONLY the data below.
 
-AVAILABLE STATISTICS:
+DATA:
 {stats_text}
 
-INSTRUCTIONS:
-1. Answer questions using the statistics provided above
-2. Use plain text only - NO markdown formatting like **bold** or *italic*
-3. Each bullet point must be on a NEW LINE
-4. Start bullet points with the bullet character •
+RULES:
+1. Answer using the data provided above
+2. Use bullet points with • character
+3. For charts, output JSON like: ```json{{"chart_type": "bar", "title": "Title", "data": {{"labels": ["A", "B"], "values": [100, 200]}}, "x_label": "X", "y_label": "Y"}}```
+4. End with 3 follow-up questions
 
-CHART INSTRUCTIONS:
-When asked to create a chart, extract the relevant data from the statistics above and format as:
-
-```json
-{{"chart_type": "bar", "title": "Descriptive Title", "data": {{"labels": ["Label1", "Label2"], "values": [123456, 234567]}}, "x_label": "X Axis Label", "y_label": "Y Axis Label"}}
-```
-
-Chart types available: bar, line, pie, horizontal_bar
-
-IMPORTANT FOR CHARTS:
-- Extract ACTUAL numbers from the statistics (remove $ and commas)
-- For "4 ROOM Average Price: $519,624" use value 519624
-- For prices by year, use the price_trends or flat_year data
-- For prices by town, use the town data
-- For prices by flat type, use the flat_type data
-
-FOLLOW-UP QUESTIONS:
-- Provide exactly 3 follow-up questions at the end
-- Questions should explore the data further
-- NEVER ask what the user wants or prefers
-
-Format:
+Example follow-up format:
 Follow-up questions:
-1. [analytical question]
-2. [analytical question]
-3. [analytical question]"""
+1. Question one?
+2. Question two?
+3. Question three?"""
 
     return call_ai([{"role": "user", "content": user_question}], system_prompt)
 
