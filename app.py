@@ -396,17 +396,34 @@ DATA:
 RULES:
 1. Answer using ONLY the data provided above - never make up numbers
 2. Use bullet points with • character
-3. When mentioning prices, ALWAYS include the transaction count if available (e.g. "$500,000 (1,234 transactions)")
+3. When mentioning prices, ALWAYS include the transaction count (e.g. "$500,000 (1,234 transactions)")
 4. Be concise and direct - give the answer first, then supporting details
-5. For charts, output JSON like: ```json{{"chart_type": "bar", "title": "Title", "data": {{"labels": ["A", "B"], "values": [100, 200]}}, "x_label": "X", "y_label": "Y"}}```
+
+IMPORTANT - NUANCED ANALYSIS:
+When answering "highest", "lowest", "best", "worst" type questions:
+1. First give the LITERAL answer (the actual highest/lowest value)
+2. Then provide STATISTICAL context - if the literal answer has very few transactions (<100), mention that a different option with more transactions might be more reliable
+3. Let the user decide which interpretation matters to them
+
+Example format for "Which town has highest price?":
+"The town with the highest average price is X at $Y (Z transactions).
+
+However, it's worth noting:
+• X has relatively few transactions (Z), so the average may be less reliable
+• Y town has the second highest price at $A with B transactions, which may be more statistically significant
+
+The answer depends on whether you prioritize the raw highest value or statistical reliability."
+
+CHART FORMAT:
+For charts, output JSON like: ```json{{"chart_type": "bar", "title": "Title", "data": {{"labels": ["A", "B"], "values": [100, 200]}}, "x_label": "X", "y_label": "Y"}}```
 
 FOLLOW-UP QUESTIONS RULES:
 1. End with exactly 3 follow-up questions
 2. At least ONE question should suggest generating a chart (e.g. "Would you like to see a chart of...?")
 3. ONLY suggest questions that CAN be answered with the available data above
-4. Do NOT suggest questions about data that doesn't exist (e.g. don't ask about "year trends" if no yearly data exists)
+4. Do NOT suggest questions about data that doesn't exist
 
-Available data categories for follow-ups: {', '.join(set(s.get('stat_category', '') for s in stats)) if stats else 'none'}
+Available data categories: {', '.join(set(s.get('stat_category', '') for s in stats)) if stats else 'none'}
 
 Example follow-up format:
 Follow-up questions:
