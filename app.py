@@ -246,10 +246,8 @@ def get_stats(dataset_id):
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Stats")
-        if df is not None and len(df) > 0 and 'dataset_id' in df.columns:
-            filtered = df[df['dataset_id'] == dataset_id]
-            if len(filtered) > 0:
-                return filtered.to_dict('records')
+        if df is not None:
+            return df[df['dataset_id'] == dataset_id].to_dict('records')
     except:
         pass
     
