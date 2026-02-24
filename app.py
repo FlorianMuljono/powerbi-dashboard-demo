@@ -387,18 +387,85 @@ def create_chart(chart_data):
     
     chart_type = chart_data.get("chart_type", "bar")
     title = chart_data.get("title", "Chart")
+    x_label = chart_data.get("x_label", "")
+    y_label = chart_data.get("y_label", "")
+    
+    # Color palette - gradient purples
+    colors = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff']
     
     if chart_type == "bar":
-        fig = px.bar(x=labels, y=values, title=title)
+        fig = px.bar(x=labels, y=values, title=title, text=values)
+        # Gradient colors for each bar
+        bar_colors = [colors[i % len(colors)] for i in range(len(labels))]
+        fig.update_traces(
+            marker_color=bar_colors,
+            marker_line_color='#4f46e5',
+            marker_line_width=1,
+            texttemplate='%{text:,.0f}',
+            textposition='outside',
+            textfont=dict(size=11, color='#4f46e5')
+        )
     elif chart_type == "line":
         fig = px.line(x=labels, y=values, title=title, markers=True)
+        fig.update_traces(
+            line=dict(color='#6366f1', width=3),
+            marker=dict(size=10, color='#6366f1', line=dict(width=2, color='white'))
+        )
     elif chart_type == "pie":
-        fig = px.pie(names=labels, values=values, title=title)
+        fig = px.pie(names=labels, values=values, title=title, hole=0.4)
+        fig.update_traces(
+            marker=dict(colors=colors, line=dict(color='white', width=2)),
+            textinfo='percent+label',
+            textfont=dict(size=12)
+        )
     else:
         fig = px.bar(x=labels, y=values, title=title)
+        fig.update_traces(marker_color='#6366f1')
     
-    fig.update_layout(font_family="DM Sans", paper_bgcolor="white", plot_bgcolor="white")
-    fig.update_traces(marker_color="#6366f1")
+    # Enhanced layout
+    fig.update_layout(
+        font_family="DM Sans",
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        title={
+            'text': title,
+            'font': {'size': 22, 'color': '#1a1a2e', 'family': 'DM Sans'},
+            'x': 0.5,
+            'xanchor': 'center',
+            'y': 0.95
+        },
+        margin=dict(l=70, r=40, t=80, b=70),
+        xaxis_title=x_label,
+        yaxis_title=y_label,
+        showlegend=False,
+        hoverlabel=dict(
+            bgcolor="white",
+            font_size=13,
+            font_family="DM Sans",
+            bordercolor="#6366f1"
+        )
+    )
+    
+    # Enhanced axes
+    fig.update_xaxes(
+        title_font=dict(size=14, color='#64748b'),
+        tickfont=dict(size=12, color='#334155'),
+        showgrid=False,
+        showline=True,
+        linewidth=1,
+        linecolor='#e2e8f0'
+    )
+    fig.update_yaxes(
+        title_font=dict(size=14, color='#64748b'),
+        tickfont=dict(size=12, color='#334155'),
+        showgrid=True,
+        gridwidth=1,
+        gridcolor='#f1f5f9',
+        showline=True,
+        linewidth=1,
+        linecolor='#e2e8f0'
+    )
+    
     return fig
 
 def extract_followup_questions(response):
@@ -451,17 +518,26 @@ def format_response_html(content):
     content = re.sub(r'(?<!\w)\*(?!\w)', '', content)  # Remove standalone *
     content = re.sub(r'(?<!\w)_(?!\w)', '', content)   # Remove standalone _
     
-    # Convert newlines to <br> tags
+    # Convert newlines to <br> tags - but avoid excessive breaks
     lines = content.split('\n')
     html_lines = []
+    prev_empty = False
     for line in lines:
         line = line.strip()
         if line:
             html_lines.append(line)
+            prev_empty = False
         else:
-            html_lines.append('<br>')
+            # Only add one <br> for empty lines, avoid multiple
+            if not prev_empty:
+                html_lines.append('')
+            prev_empty = True
     
-    return '<br>'.join(html_lines)
+    # Join with single <br>, filter out empty strings
+    result = '<br>'.join([l for l in html_lines if l or html_lines.index(l) < len(html_lines) - 1])
+    # Clean up multiple <br> tags
+    result = re.sub(r'(<br>){3,}', '<br><br>', result)
+    return result
 
 def format_plain_text(text):
     """Clean text of any markdown formatting - for Key Facts etc."""
@@ -731,16 +807,44 @@ def render_main_app():
                         </iframe>
                         """, unsafe_allow_html=True)
                     else:
-                        content_clean = clean_response_for_display(content)
-                        content_html = format_response_html(content_clean)
-                        st.markdown(f'<div class="assistant-message-box">{content_html}</div>', unsafe_allow_html=True)
-                    
-                    # Chart if present
-                    chart_data = parse_chart_from_response(msg["content"])
-                    if chart_data:
-                        fig = create_chart(chart_data)
-                        if fig:
-                            st.plotly_chart(fig, use_container_width=True)
+                        # Check if there's a chart in the response
+                        chart_data = parse_chart_from_response(msg["content"])
+                        
+                        if chart_data:
+                            # Split content into before-chart and after-chart (insights)
+                            content_clean = clean_response_for_display(content)
+                            
+                            # Find where "Key insights" or similar starts
+                            insights_split = re.split(r'(Key insights:|Key Insights:|Insights:|Analysis:)', content_clean, flags=re.IGNORECASE)
+                            
+                            if len(insights_split) > 1:
+                                # Show intro text (before insights)
+                                intro_text = insights_split[0].strip()
+                                if intro_text:
+                                    intro_html = format_response_html(intro_text)
+                                    st.markdown(f'<div class="assistant-message-box">{intro_html}</div>', unsafe_allow_html=True)
+                                
+                                # Show chart
+                                fig = create_chart(chart_data)
+                                if fig:
+                                    st.plotly_chart(fig, use_container_width=True)
+                                
+                                # Show insights below chart
+                                insights_text = insights_split[1] + insights_split[2] if len(insights_split) > 2 else insights_split[1]
+                                insights_html = format_response_html(insights_text.strip())
+                                st.markdown(f'<div class="assistant-message-box">{insights_html}</div>', unsafe_allow_html=True)
+                            else:
+                                # No clear split, show all then chart
+                                content_html = format_response_html(content_clean)
+                                st.markdown(f'<div class="assistant-message-box">{content_html}</div>', unsafe_allow_html=True)
+                                fig = create_chart(chart_data)
+                                if fig:
+                                    st.plotly_chart(fig, use_container_width=True)
+                        else:
+                            # No chart, just show content
+                            content_clean = clean_response_for_display(content)
+                            content_html = format_response_html(content_clean)
+                            st.markdown(f'<div class="assistant-message-box">{content_html}</div>', unsafe_allow_html=True)
                     
                     # Follow-up questions (only for last message)
                     if idx == len(st.session_state.messages) - 1:
@@ -751,6 +855,21 @@ def render_main_app():
                                 if st.button(q, key=f"fu_{idx}_{i}", use_container_width=True):
                                     st.session_state.pending_question = q
                                     st.rerun()
+            
+            # Auto-scroll to input area when messages exist
+            if st.session_state.messages:
+                import streamlit.components.v1 as components
+                components.html(
+                    """
+                    <script>
+                        const inputArea = window.parent.document.querySelector('[data-testid="stTextArea"]');
+                        if (inputArea) {
+                            inputArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    </script>
+                    """,
+                    height=0
+                )
             
             # Input area
             st.markdown("---")
