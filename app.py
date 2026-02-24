@@ -599,11 +599,21 @@ def extract_followup_questions(response):
     questions = []
     lines = response.split('\n')
     in_followup = False
+    
     for line in lines:
         line = line.strip()
-        if 'follow-up' in line.lower() or 'follow up' in line.lower():
+        # Check for follow-up section header
+        if 'follow-up' in line.lower() or 'follow up' in line.lower() or 'suggested question' in line.lower():
             in_followup = True
             continue
+        
+        # Also capture bullet points that look like questions/commands at the end
+        if line.startswith('•') or line.startswith('-') or line.startswith('*'):
+            clean = re.sub(r'^[\•\-\*]+\s*', '', line).strip()
+            # Check if it looks like a follow-up question/command
+            if any(clean.lower().startswith(cmd) for cmd in ['show', 'compare', 'list', 'what', 'which', 'how', 'why', 'create', 'generate', 'display']):
+                in_followup = True
+        
         if in_followup:
             clean = re.sub(r'^[\d\.\)\-\*\•]+\s*', '', line).strip()
             # Remove any JSON from the question
@@ -611,19 +621,26 @@ def extract_followup_questions(response):
             clean = re.sub(r'\{[^}]*"chart_type"[^}]*\}', '', clean)
             clean = re.sub(r'json\{.*?\}', '', clean, flags=re.DOTALL)
             clean = clean.strip()
-            if len(clean) > 10 and '?' in clean:
-                # Filter out questions that ask the user for preferences
-                bad_patterns = ['would you like me to', 'do you want me to', 'shall i']
-                is_bad = any(pattern in clean.lower() for pattern in bad_patterns)
-                if not is_bad:
-                    questions.append(clean)
+            # Accept questions (with ?) OR commands (Show me, Compare, etc.)
+            if len(clean) > 10:
+                is_question = '?' in clean
+                is_command = any(clean.lower().startswith(cmd) for cmd in ['show', 'compare', 'list', 'what', 'which', 'how', 'why', 'create', 'generate', 'display'])
+                if is_question or is_command:
+                    # Filter out AI-to-user questions
+                    bad_patterns = ['would you like me to', 'do you want me to', 'shall i', 'can i help']
+                    is_bad = any(pattern in clean.lower() for pattern in bad_patterns)
+                    if not is_bad and clean not in questions:
+                        questions.append(clean)
     return questions[:3]
 
 def clean_response_for_display(response):
     # Remove JSON code blocks
     cleaned = re.sub(r'```json\s*.*?\s*```', '', response, flags=re.DOTALL)
-    # Remove follow-up section
+    # Remove follow-up section (various formats)
     cleaned = re.sub(r'Follow-up questions:.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'Suggested follow-up.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
+    # Remove bullet point questions at the end (• Show me... • Which... • Compare...)
+    cleaned = re.sub(r'(\n\s*•\s*(Show|Which|Compare|What|How|Create|List|Display)[^\n]*)+\s*$', '', cleaned, flags=re.IGNORECASE)
     return cleaned.strip()
 
 def format_response_html(content):
