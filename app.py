@@ -388,8 +388,21 @@ def get_value_based_colors(values, color_light='#c7d2fe', color_dark='#4f46e5'):
     if not values:
         return []
     
-    min_val = min(values)
-    max_val = max(values)
+    # Convert all values to float, handle any non-numeric
+    try:
+        numeric_values = [float(v) for v in values]
+    except (ValueError, TypeError):
+        # If conversion fails, return default color for all
+        return [color_dark] * len(values)
+    
+    if len(numeric_values) == 0:
+        return []
+    
+    if len(numeric_values) == 1:
+        return [color_dark]
+    
+    min_val = min(numeric_values)
+    max_val = max(numeric_values)
     val_range = max_val - min_val if max_val != min_val else 1
     
     # Parse hex colors to RGB
@@ -397,7 +410,7 @@ def get_value_based_colors(values, color_light='#c7d2fe', color_dark='#4f46e5'):
     dark_r, dark_g, dark_b = int(color_dark[1:3], 16), int(color_dark[3:5], 16), int(color_dark[5:7], 16)
     
     colors = []
-    for v in values:
+    for v in numeric_values:
         # Normalize value between 0 and 1
         ratio = (v - min_val) / val_range
         # Interpolate between light and dark
