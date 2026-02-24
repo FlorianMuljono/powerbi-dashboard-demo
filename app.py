@@ -242,10 +242,20 @@ def get_datasets():
     return []
 
 def get_stats(dataset_id):
-    # Try Google Sheet first
+    # Get the stats_tab name from Datasets
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
-        df = load_google_sheet_data(sheet_id, "Stats2")
+        
+        # First, find the stats_tab for this dataset
+        datasets_df = load_google_sheet_data(sheet_id, "Datasets")
+        stats_tab = "Stats"  # default
+        if datasets_df is not None:
+            ds_row = datasets_df[datasets_df['dataset_id'] == dataset_id]
+            if len(ds_row) > 0 and 'stats_tab' in ds_row.columns:
+                stats_tab = ds_row.iloc[0]['stats_tab']
+        
+        # Load from the specific stats tab
+        df = load_google_sheet_data(sheet_id, stats_tab)
         if df is not None:
             return df[df['dataset_id'] == dataset_id].to_dict('records')
     except:
