@@ -242,22 +242,40 @@ def get_datasets():
     return []
 
 def get_stats(dataset_id):
-    # Get the stats_tab name from Datasets
+    # Get the stats_tab and crosstab_tab names from Datasets
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         
-        # First, find the stats_tab for this dataset
+        # First, find the stats_tab and crosstab_tab for this dataset
         datasets_df = load_google_sheet_data(sheet_id, "Datasets")
         stats_tab = "Stats"  # default
+        crosstab_tab = None
+        
         if datasets_df is not None:
             ds_row = datasets_df[datasets_df['dataset_id'] == dataset_id]
-            if len(ds_row) > 0 and 'stats_tab' in ds_row.columns:
-                stats_tab = ds_row.iloc[0]['stats_tab']
+            if len(ds_row) > 0:
+                if 'stats_tab' in ds_row.columns:
+                    stats_tab = ds_row.iloc[0]['stats_tab']
+                if 'crosstab_tab' in ds_row.columns:
+                    ct = ds_row.iloc[0]['crosstab_tab']
+                    if pd.notna(ct) and str(ct).strip():
+                        crosstab_tab = str(ct).strip()
         
-        # Load from the specific stats tab
+        all_stats = []
+        
+        # Load from the main stats tab
         df = load_google_sheet_data(sheet_id, stats_tab)
         if df is not None:
-            return df[df['dataset_id'] == dataset_id].to_dict('records')
+            all_stats.extend(df[df['dataset_id'] == dataset_id].to_dict('records'))
+        
+        # Also load from crosstab tab if exists
+        if crosstab_tab:
+            df2 = load_google_sheet_data(sheet_id, crosstab_tab)
+            if df2 is not None:
+                all_stats.extend(df2[df2['dataset_id'] == dataset_id].to_dict('records'))
+        
+        if all_stats:
+            return all_stats
     except:
         pass
     
