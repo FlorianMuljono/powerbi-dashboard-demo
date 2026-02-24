@@ -326,43 +326,49 @@ def get_ai_response(user_question, dataset_name, stats):
     
     system_prompt = f"""You are an expert data analyst helping users understand the "{dataset_name}" dataset.
 
-AVAILABLE STATISTICS:
+AVAILABLE STATISTICS (USE ONLY THESE - DO NOT MAKE UP DATA):
 {stats_text}
 
-CRITICAL FORMATTING RULES:
-1. Use plain text only - absolutely NO markdown formatting like **bold**, *italic*, or any special characters
-2. Each bullet point must be on a NEW LINE - this is critical for readability
-3. Start bullet points with the bullet character •
-4. Leave blank lines between sections
+CRITICAL RULES:
+1. ONLY use numbers from the AVAILABLE STATISTICS above - NEVER invent or estimate data
+2. If the user asks for data not in the statistics, say "This specific data is not available in the current statistics"
+3. Use plain text only - NO markdown formatting like **bold** or *italic*
+4. Each bullet point must be on a NEW LINE
+5. Start bullet points with the bullet character •
 
-EXAMPLE OF CORRECT FORMAT:
-The highest price town is Pasir Ris at $373,272 while the lowest is Sembawang at $69,683.
+CHART RULES - VERY IMPORTANT:
+When asked to create a chart, you MUST:
+1. ONLY use actual values from the AVAILABLE STATISTICS above
+2. Extract the exact numbers - do not round or estimate
+3. Use this exact JSON format:
 
-Key insights:
-
-• Pasir Ris has the highest average price of $373,272
-• Sembawang has the lowest average price of $69,683
-• The price gap between highest and lowest is over $300,000
-
-FOLLOW-UP QUESTIONS RULES:
-- Provide exactly 3 follow-up questions at the end
-- These must be questions the USER would ask YOU about the data
-- NEVER ask what the user wants or prefers
-- Questions should explore the data further
-
-WRONG (asking user): "Are there any specific flat types you would like to focus on?"
-CORRECT (exploring data): "Which flat types have seen the biggest price increases?"
-
-Format follow-ups like this:
-Follow-up questions:
-1. [analytical question about the data]
-2. [analytical question about the data]
-3. [analytical question about the data]
-
-If asked to create a chart, include:
 ```json
-{{"chart_type": "bar", "title": "Title", "data": {{"labels": [...], "values": [...]}}, "x_label": "X", "y_label": "Y"}}
-```"""
+{{"chart_type": "bar", "title": "Descriptive Title", "data": {{"labels": ["Label1", "Label2"], "values": [123456, 234567]}}, "x_label": "X Axis Label", "y_label": "Y Axis Label"}}
+```
+
+CHART EXAMPLES USING REAL DATA:
+- For flat type prices: labels=["3 ROOM", "4 ROOM", "5 ROOM"], values=[365873, 519624, 614580]
+- For town prices: labels=["YISHUN", "BISHAN", "BUKIT TIMAH"], values=[442616, 699962, 765735]
+- For yearly trends: labels=["2017", "2018", "2019"], values=[443889, 441282, 432138]
+
+Chart types available: bar, line, pie, horizontal_bar, scatter, area
+
+RESPONSE FORMAT:
+1. Brief intro sentence
+2. Key insights with bullet points (using REAL numbers from statistics)
+3. Chart JSON (if requested) with REAL data
+4. Follow-up questions
+
+FOLLOW-UP QUESTIONS:
+- Provide exactly 3 follow-up questions at the end
+- Questions should explore the data further
+- NEVER ask what the user wants or prefers
+
+Format:
+Follow-up questions:
+1. [analytical question]
+2. [analytical question]
+3. [analytical question]"""
 
     return call_ai([{"role": "user", "content": user_question}], system_prompt)
 
@@ -436,14 +442,16 @@ def create_chart(chart_data):
     colors = get_value_based_colors(values)
     
     if chart_type == "bar":
-        fig = px.bar(x=labels, y=values, title=title, text=values)
+        fig = px.bar(x=labels, y=values, title=title)
+        # Only show text labels if values are valid numbers
+        valid_text = all(isinstance(v, (int, float)) and not (isinstance(v, float) and (v != v)) for v in values)
         fig.update_traces(
             marker_color=colors,
             marker_line_color='#4f46e5',
             marker_line_width=1,
-            texttemplate='%{text:,.0f}',
-            textposition='outside',
-            textfont=dict(size=11, color='#4f46e5')
+            texttemplate='%{y:,.0f}' if valid_text else None,
+            textposition='outside' if valid_text else None,
+            textfont=dict(size=11, color='#4f46e5') if valid_text else None
         )
     elif chart_type == "line":
         fig = px.line(x=labels, y=values, title=title, markers=True)
@@ -459,14 +467,15 @@ def create_chart(chart_data):
             textfont=dict(size=12)
         )
     elif chart_type == "horizontal_bar":
-        fig = px.bar(x=values, y=labels, title=title, text=values, orientation='h')
+        fig = px.bar(x=values, y=labels, title=title, orientation='h')
+        valid_text = all(isinstance(v, (int, float)) and not (isinstance(v, float) and (v != v)) for v in values)
         fig.update_traces(
             marker_color=colors,
             marker_line_color='#4f46e5',
             marker_line_width=1,
-            texttemplate='%{text:,.0f}',
-            textposition='outside',
-            textfont=dict(size=11, color='#4f46e5')
+            texttemplate='%{x:,.0f}' if valid_text else None,
+            textposition='outside' if valid_text else None,
+            textfont=dict(size=11, color='#4f46e5') if valid_text else None
         )
     elif chart_type == "scatter":
         fig = px.scatter(x=labels, y=values, title=title, size=values)
@@ -481,7 +490,7 @@ def create_chart(chart_data):
         )
     else:
         # Default to bar chart
-        fig = px.bar(x=labels, y=values, title=title, text=values)
+        fig = px.bar(x=labels, y=values, title=title)
         fig.update_traces(
             marker_color=colors,
             marker_line_color='#4f46e5',
