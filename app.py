@@ -379,6 +379,35 @@ def parse_chart_from_response(response):
             pass
     return None
 
+def get_value_based_colors(values, color_light='#c7d2fe', color_dark='#4f46e5'):
+    """
+    Universal function to generate colors based on values.
+    Lower values = lighter colors, Higher values = darker colors.
+    Works for any chart type.
+    """
+    if not values:
+        return []
+    
+    min_val = min(values)
+    max_val = max(values)
+    val_range = max_val - min_val if max_val != min_val else 1
+    
+    # Parse hex colors to RGB
+    light_r, light_g, light_b = int(color_light[1:3], 16), int(color_light[3:5], 16), int(color_light[5:7], 16)
+    dark_r, dark_g, dark_b = int(color_dark[1:3], 16), int(color_dark[3:5], 16), int(color_dark[5:7], 16)
+    
+    colors = []
+    for v in values:
+        # Normalize value between 0 and 1
+        ratio = (v - min_val) / val_range
+        # Interpolate between light and dark
+        r = int(light_r + (dark_r - light_r) * ratio)
+        g = int(light_g + (dark_g - light_g) * ratio)
+        b = int(light_b + (dark_b - light_b) * ratio)
+        colors.append(f'rgb({r},{g},{b})')
+    
+    return colors
+
 def create_chart(chart_data):
     labels = chart_data.get("data", {}).get("labels", [])
     values = chart_data.get("data", {}).get("values", [])
@@ -390,15 +419,13 @@ def create_chart(chart_data):
     x_label = chart_data.get("x_label", "")
     y_label = chart_data.get("y_label", "")
     
-    # Color palette - gradient purples
-    colors = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff']
+    # Get value-based colors (works for ALL chart types)
+    colors = get_value_based_colors(values)
     
     if chart_type == "bar":
         fig = px.bar(x=labels, y=values, title=title, text=values)
-        # Gradient colors for each bar
-        bar_colors = [colors[i % len(colors)] for i in range(len(labels))]
         fig.update_traces(
-            marker_color=bar_colors,
+            marker_color=colors,
             marker_line_color='#4f46e5',
             marker_line_width=1,
             texttemplate='%{text:,.0f}',
@@ -409,20 +436,46 @@ def create_chart(chart_data):
         fig = px.line(x=labels, y=values, title=title, markers=True)
         fig.update_traces(
             line=dict(color='#6366f1', width=3),
-            marker=dict(size=10, color='#6366f1', line=dict(width=2, color='white'))
+            marker=dict(size=10, color=colors, line=dict(width=2, color='white'))
         )
-    elif chart_type == "pie":
-        fig = px.pie(names=labels, values=values, title=title, hole=0.4)
+    elif chart_type == "pie" or chart_type == "donut":
+        fig = px.pie(names=labels, values=values, title=title, hole=0.4 if chart_type == "donut" else 0)
         fig.update_traces(
             marker=dict(colors=colors, line=dict(color='white', width=2)),
             textinfo='percent+label',
             textfont=dict(size=12)
         )
+    elif chart_type == "horizontal_bar":
+        fig = px.bar(x=values, y=labels, title=title, text=values, orientation='h')
+        fig.update_traces(
+            marker_color=colors,
+            marker_line_color='#4f46e5',
+            marker_line_width=1,
+            texttemplate='%{text:,.0f}',
+            textposition='outside',
+            textfont=dict(size=11, color='#4f46e5')
+        )
+    elif chart_type == "scatter":
+        fig = px.scatter(x=labels, y=values, title=title, size=values)
+        fig.update_traces(
+            marker=dict(color=colors, line=dict(width=1, color='#4f46e5'))
+        )
+    elif chart_type == "area":
+        fig = px.area(x=labels, y=values, title=title)
+        fig.update_traces(
+            fillcolor='rgba(99, 102, 241, 0.3)',
+            line=dict(color='#6366f1', width=2)
+        )
     else:
-        fig = px.bar(x=labels, y=values, title=title)
-        fig.update_traces(marker_color='#6366f1')
+        # Default to bar chart
+        fig = px.bar(x=labels, y=values, title=title, text=values)
+        fig.update_traces(
+            marker_color=colors,
+            marker_line_color='#4f46e5',
+            marker_line_width=1
+        )
     
-    # Enhanced layout
+    # Universal layout - applies to ALL chart types
     fig.update_layout(
         font_family="DM Sans",
         paper_bgcolor="white",
@@ -446,7 +499,7 @@ def create_chart(chart_data):
         )
     )
     
-    # Enhanced axes
+    # Universal axis styling
     fig.update_xaxes(
         title_font=dict(size=14, color='#64748b'),
         tickfont=dict(size=12, color='#334155'),
