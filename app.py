@@ -397,39 +397,34 @@ RULES:
 1. Answer using ONLY the data provided above - never make up numbers
 2. Use bullet points with • character
 3. When mentioning prices, ALWAYS include the transaction count (e.g. "$500,000 (1,234 transactions)")
-4. Be concise and direct - give the answer first, then supporting details
 
-IMPORTANT - NUANCED ANALYSIS:
-When answering "highest", "lowest", "best", "worst" type questions:
-1. First give the LITERAL answer (the actual highest/lowest value)
-2. Then provide STATISTICAL context - if the literal answer has very few transactions (<100), mention that a different option with more transactions might be more reliable
-3. Let the user decide which interpretation matters to them
+CRITICAL - FOR "HIGHEST/LOWEST/MOST/LEAST" QUESTIONS:
+You MUST follow this exact structure:
+1. FIRST LINE: State the LITERAL answer - find the actual highest/lowest NUMBER in the data, regardless of transaction count
+2. THEN: List the top 3 values with their transaction counts
+3. FINALLY: Add a note that options with more transactions may be more statistically reliable
 
-Example format for "Which town has highest price?":
-"The town with the highest average price is X at $Y (Z transactions).
+IMPORTANT: Scan ALL the numbers carefully to find the true highest/lowest. Do not assume high transaction count means highest price.
 
-However, it's worth noting:
-• X has relatively few transactions (Z), so the average may be less reliable
-• Y town has the second highest price at $A with B transactions, which may be more statistically significant
+Example for "Which town has highest EXECUTIVE price?":
+"The town with the highest average EXECUTIVE price is QUEENSTOWN at $1,085,672 (57 transactions).
 
-The answer depends on whether you prioritize the raw highest value or statistical reliability."
+Top 3 highest EXECUTIVE flat prices:
+• QUEENSTOWN: $1,085,672 (57 transactions)
+• BUKIT TIMAH: $1,072,561 (106 transactions)
+• CENTRAL AREA: $1,034,000 (2 transactions)
+
+Note: Towns with more transactions may have more reliable averages. BUKIT TIMAH (106 transactions) could be considered more statistically significant than QUEENSTOWN (57 transactions)."
 
 CHART FORMAT:
 For charts, output JSON like: ```json{{"chart_type": "bar", "title": "Title", "data": {{"labels": ["A", "B"], "values": [100, 200]}}, "x_label": "X", "y_label": "Y"}}```
 
-FOLLOW-UP QUESTIONS RULES:
+FOLLOW-UP QUESTIONS:
 1. End with exactly 3 follow-up questions
-2. At least ONE question should suggest generating a chart (e.g. "Would you like to see a chart of...?")
-3. ONLY suggest questions that CAN be answered with the available data above
-4. Do NOT suggest questions about data that doesn't exist
+2. At least ONE should suggest generating a chart
+3. ONLY suggest questions answerable with available data
 
-Available data categories: {', '.join(set(s.get('stat_category', '') for s in stats)) if stats else 'none'}
-
-Example follow-up format:
-Follow-up questions:
-1. Would you like to see a chart comparing prices across all towns?
-2. Which flat type has the most transactions?
-3. How do 4-ROOM prices compare to 5-ROOM prices?"""
+Available data categories: {', '.join(set(s.get('stat_category', '') for s in stats)) if stats else 'none'}"""
 
     return call_ai([{"role": "user", "content": user_question}], system_prompt)
 
