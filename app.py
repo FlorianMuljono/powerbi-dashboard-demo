@@ -388,43 +388,28 @@ def get_ai_response(user_question, dataset_name, stats):
     if not stats or stats_text == "No statistics available.":
         return "I'm having trouble loading the statistics from the database. Please try refreshing the page or contact support.\n\nFollow-up questions:\n1. Can you try refreshing the page?\n2. Is the Google Sheet accessible?\n3. Are the API keys configured?"
     
-    system_prompt = f"""You are a helpful data analyst. Answer questions about the "{dataset_name}" dataset using ONLY the data below.
+    system_prompt = f"""You are a data analyst. Answer questions using ONLY the data below.
 
 DATA:
 {stats_text}
 
 RULES:
-1. Answer using ONLY the data provided above - never make up numbers
-2. Use bullet points with • character
-3. When mentioning prices, ALWAYS include the transaction count (e.g. "$500,000 (1,234 transactions)")
+1. Use ONLY the data provided - never make up numbers
+2. Always include transaction counts with prices (e.g. "$500,000 (1,234 transactions)")
+3. Use • for bullet points
 
-CRITICAL - FOR "HIGHEST/LOWEST/MOST/LEAST" QUESTIONS:
-You MUST follow this exact structure:
-1. FIRST LINE: State the LITERAL answer - find the actual highest/lowest NUMBER in the data, regardless of transaction count
-2. THEN: List the top 3 values with their transaction counts
-3. FINALLY: Add a note that options with more transactions may be more statistically reliable
+FOR QUESTIONS ABOUT HIGHEST/LOWEST/MOST/LEAST:
+- First, give the literal answer (the actual highest or lowest number)
+- Then list the top 3 with their transaction counts
+- Finally, note if any option with more transactions might be more statistically reliable
 
-IMPORTANT: Scan ALL the numbers carefully to find the true highest/lowest. Do not assume high transaction count means highest price.
+RESPONSE STRUCTURE:
+1. Direct answer (1-2 sentences)
+2. Supporting details with bullet points
+3. Brief note on data reliability if relevant
+4. 3 follow-up questions (at least one should suggest a chart)
 
-Example for "Which town has highest EXECUTIVE price?":
-"The town with the highest average EXECUTIVE price is QUEENSTOWN at $1,085,672 (57 transactions).
-
-Top 3 highest EXECUTIVE flat prices:
-• QUEENSTOWN: $1,085,672 (57 transactions)
-• BUKIT TIMAH: $1,072,561 (106 transactions)
-• CENTRAL AREA: $1,034,000 (2 transactions)
-
-Note: Towns with more transactions may have more reliable averages. BUKIT TIMAH (106 transactions) could be considered more statistically significant than QUEENSTOWN (57 transactions)."
-
-CHART FORMAT:
-For charts, output JSON like: ```json{{"chart_type": "bar", "title": "Title", "data": {{"labels": ["A", "B"], "values": [100, 200]}}, "x_label": "X", "y_label": "Y"}}```
-
-FOLLOW-UP QUESTIONS:
-1. End with exactly 3 follow-up questions
-2. At least ONE should suggest generating a chart
-3. ONLY suggest questions answerable with available data
-
-Available data categories: {', '.join(set(s.get('stat_category', '') for s in stats)) if stats else 'none'}"""
+For charts, use: ```json{{"chart_type": "bar", "title": "Title", "data": {{"labels": ["A", "B"], "values": [100, 200]}}, "x_label": "X", "y_label": "Y"}}```"""
 
     return call_ai([{"role": "user", "content": user_question}], system_prompt)
 
