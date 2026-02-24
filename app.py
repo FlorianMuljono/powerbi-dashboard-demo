@@ -220,17 +220,20 @@ st.markdown("""
 
 @st.cache_data(ttl=10)  # 10 seconds cache for demo reliability
 def load_google_sheet_data(sheet_id, tab_name):
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={tab_name}"
+    import urllib.parse
+    encoded_tab = urllib.parse.quote(tab_name)
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={encoded_tab}"
     try:
-        return pd.read_csv(url)
-    except:
+        df = pd.read_csv(url)
+        return df
+    except Exception as e:
         return None
 
 def get_datasets():
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Datasets")
-        if df is not None:
+        if df is not None and len(df) > 0:
             # Filter only active datasets if column exists
             if 'active' in df.columns:
                 df = df[df['active'].astype(str).str.upper() == 'TRUE']
@@ -243,10 +246,9 @@ def get_stats(dataset_id):
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Stats")
-        if df is not None and len(df) > 0:
-            # Try to filter by dataset_id
-            if 'dataset_id' in df.columns:
-                filtered = df[df['dataset_id'] == dataset_id]
+        if df is not None and len(df) > 0 and 'dataset_id' in df.columns:
+            filtered = df[df['dataset_id'] == dataset_id]
+            if len(filtered) > 0:
                 return filtered.to_dict('records')
     except:
         pass
@@ -331,6 +333,10 @@ def format_stats_for_prompt(stats):
 
 def get_ai_response(user_question, dataset_name, stats):
     stats_text = format_stats_for_prompt(stats)
+    
+    # Debug: if no stats, tell user
+    if not stats or stats_text == "No statistics available.":
+        return "I'm having trouble loading the statistics from the database. Please try refreshing the page or contact support.\n\nFollow-up questions:\n1. Can you try refreshing the page?\n2. Is the Google Sheet accessible?\n3. Are the API keys configured?"
     
     system_prompt = f"""You are a helpful data analyst. Answer questions about the "{dataset_name}" dataset using ONLY the data below.
 
@@ -992,6 +998,9 @@ def render_main_app():
                     response = "No dashboards configured for this dataset yet.\n\nFollow-up questions:\n1. What specific data would you like to explore?\n2. Should I create a chart for you?\n3. Which metrics are most important?"
             else:
                 with st.spinner("Analyzing..."):
+                    # Debug: show stats count
+                    if not stats:
+                        st.warning(f"No stats found for dataset: {st.session_state.selected_dataset}")
                     response = get_ai_response(q, current_ds['dataset_name'], stats)
             
             st.session_state.messages.append({"role": "assistant", "content": response})
