@@ -242,7 +242,18 @@ def get_datasets():
     return []
 
 def get_stats(dataset_id):
-    # HARDCODED STATS - Google Sheets not working reliably
+    # Try Google Sheet first
+    try:
+        sheet_id = st.secrets["GOOGLE_SHEET_ID"]
+        df = load_google_sheet_data(sheet_id, "Stats")
+        if df is not None and len(df) > 0 and 'dataset_id' in df.columns:
+            filtered = df[df['dataset_id'] == dataset_id]
+            if len(filtered) > 0:
+                return filtered.to_dict('records')
+    except:
+        pass
+    
+    # FALLBACK: Hardcoded stats for hdb_insights
     if dataset_id == "hdb_insights":
         return [
             {"stat_category": "overview", "stat_name": "Total Transactions", "stat_value": "209701"},
