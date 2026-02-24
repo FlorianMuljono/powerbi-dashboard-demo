@@ -218,7 +218,6 @@ st.markdown("""
 # GOOGLE SHEETS FUNCTIONS
 # =============================================================================
 
-@st.cache_data(ttl=10)  # 10 seconds cache for demo reliability
 def load_google_sheet_data(sheet_id, tab_name):
     import urllib.parse
     encoded_tab = urllib.parse.quote(tab_name)
@@ -246,11 +245,27 @@ def get_stats(dataset_id):
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Stats")
-        if df is not None and len(df) > 0 and 'dataset_id' in df.columns:
-            filtered = df[df['dataset_id'] == dataset_id]
+        if df is not None and len(df) > 0:
+            # Debug: print columns
+            cols = list(df.columns)
+            
+            # Try exact match first
+            if 'dataset_id' in cols:
+                filtered = df[df['dataset_id'] == dataset_id]
+                if len(filtered) > 0:
+                    return filtered.to_dict('records')
+            
+            # Try first column as dataset_id
+            first_col = cols[0]
+            filtered = df[df[first_col] == dataset_id]
             if len(filtered) > 0:
                 return filtered.to_dict('records')
-    except:
+                
+            # Try case-insensitive match on first column
+            filtered = df[df[first_col].astype(str).str.lower() == dataset_id.lower()]
+            if len(filtered) > 0:
+                return filtered.to_dict('records')
+    except Exception as e:
         pass
     return []
 
@@ -1000,7 +1015,9 @@ def render_main_app():
                 with st.spinner("Analyzing..."):
                     # Debug: show stats count
                     if not stats:
-                        st.warning(f"No stats found for dataset: {st.session_state.selected_dataset}")
+                        st.warning(f"No stats loaded. Dataset ID: '{st.session_state.selected_dataset}'")
+                    else:
+                        st.info(f"Loaded {len(stats)} stats")
                     response = get_ai_response(q, current_ds['dataset_name'], stats)
             
             st.session_state.messages.append({"role": "assistant", "content": response})
