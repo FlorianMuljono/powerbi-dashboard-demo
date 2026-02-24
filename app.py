@@ -394,16 +394,25 @@ DATA:
 {stats_text}
 
 RULES:
-1. Answer using the data provided above
+1. Answer using ONLY the data provided above - never make up numbers
 2. Use bullet points with • character
-3. For charts, output JSON like: ```json{{"chart_type": "bar", "title": "Title", "data": {{"labels": ["A", "B"], "values": [100, 200]}}, "x_label": "X", "y_label": "Y"}}```
-4. End with 3 follow-up questions
+3. When mentioning prices, ALWAYS include the transaction count if available (e.g. "$500,000 (1,234 transactions)")
+4. Be concise and direct - give the answer first, then supporting details
+5. For charts, output JSON like: ```json{{"chart_type": "bar", "title": "Title", "data": {{"labels": ["A", "B"], "values": [100, 200]}}, "x_label": "X", "y_label": "Y"}}```
+
+FOLLOW-UP QUESTIONS RULES:
+1. End with exactly 3 follow-up questions
+2. At least ONE question should suggest generating a chart (e.g. "Would you like to see a chart of...?")
+3. ONLY suggest questions that CAN be answered with the available data above
+4. Do NOT suggest questions about data that doesn't exist (e.g. don't ask about "year trends" if no yearly data exists)
+
+Available data categories for follow-ups: {', '.join(set(s.get('stat_category', '') for s in stats)) if stats else 'none'}
 
 Example follow-up format:
 Follow-up questions:
-1. Question one?
-2. Question two?
-3. Question three?"""
+1. Would you like to see a chart comparing prices across all towns?
+2. Which flat type has the most transactions?
+3. How do 4-ROOM prices compare to 5-ROOM prices?"""
 
     return call_ai([{"role": "user", "content": user_question}], system_prompt)
 
