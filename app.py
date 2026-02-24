@@ -407,7 +407,16 @@ RESPONSE STRUCTURE:
 1. Direct answer (1-2 sentences)
 2. Supporting details with bullet points
 3. Brief note on data reliability if relevant
-4. 3 follow-up questions (at least one should suggest a chart)
+4. 3 follow-up questions
+
+FOLLOW-UP QUESTIONS FORMAT:
+- These are questions the USER might ask next (not questions you ask the user)
+- At least one should request a chart
+- Write them as direct requests/questions like:
+  • "Show me a chart of prices by town"
+  • "Which flat type has the most transactions?"
+  • "Compare 3-ROOM and 4-ROOM prices"
+- Do NOT write "Would you like..." or "Do you want..." - these are wrong
 
 For charts, use: ```json{{"chart_type": "bar", "title": "Title", "data": {{"labels": ["A", "B"], "values": [100, 200]}}, "x_label": "X", "y_label": "Y"}}```"""
 
@@ -597,9 +606,14 @@ def extract_followup_questions(response):
             continue
         if in_followup:
             clean = re.sub(r'^[\d\.\)\-\*\•]+\s*', '', line).strip()
+            # Remove any JSON from the question
+            clean = re.sub(r'```json.*?```', '', clean, flags=re.DOTALL)
+            clean = re.sub(r'\{[^}]*"chart_type"[^}]*\}', '', clean)
+            clean = re.sub(r'json\{.*?\}', '', clean, flags=re.DOTALL)
+            clean = clean.strip()
             if len(clean) > 10 and '?' in clean:
                 # Filter out questions that ask the user for preferences
-                bad_patterns = ['would you', 'do you', 'are there any', 'what would you', 'is there', 'can you tell me', 'would you like']
+                bad_patterns = ['would you like me to', 'do you want me to', 'shall i']
                 is_bad = any(pattern in clean.lower() for pattern in bad_patterns)
                 if not is_bad:
                     questions.append(clean)
