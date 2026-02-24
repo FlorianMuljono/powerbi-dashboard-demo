@@ -243,11 +243,13 @@ def get_stats(dataset_id):
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
         df = load_google_sheet_data(sheet_id, "Stats")
-        if df is not None:
-            filtered = df[df['dataset_id'] == dataset_id].to_dict('records')
-            return filtered
-    except Exception as e:
-        st.error(f"Error loading stats: {e}")
+        if df is not None and len(df) > 0:
+            # Try to filter by dataset_id
+            if 'dataset_id' in df.columns:
+                filtered = df[df['dataset_id'] == dataset_id]
+                return filtered.to_dict('records')
+    except:
+        pass
     return []
 
 def get_dashboards(dataset_id):
@@ -316,11 +318,15 @@ def format_stats_for_prompt(stats):
     formatted = []
     current_category = None
     for stat in stats:
-        category = stat.get('stat_category', 'general')
+        # Handle both lowercase and original case column names
+        category = stat.get('stat_category', stat.get('Stat_category', 'general'))
+        stat_name = stat.get('stat_name', stat.get('Stat_name', 'N/A'))
+        stat_value = stat.get('stat_value', stat.get('Stat_value', 'N/A'))
+        
         if category != current_category:
             current_category = category
-            formatted.append(f"\n{category.upper()}:")
-        formatted.append(f"  {stat.get('stat_name', 'N/A')}: {stat.get('stat_value', 'N/A')}")
+            formatted.append(f"\n{str(category).upper()}:")
+        formatted.append(f"  {stat_name}: {stat_value}")
     return "\n".join(formatted)
 
 def get_ai_response(user_question, dataset_name, stats):
