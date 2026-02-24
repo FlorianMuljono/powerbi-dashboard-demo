@@ -245,7 +245,7 @@ def get_stats(dataset_id):
     # Try Google Sheet first
     try:
         sheet_id = st.secrets["GOOGLE_SHEET_ID"]
-        df = load_google_sheet_data(sheet_id, "Stats")
+        df = load_google_sheet_data(sheet_id, "Stats2")
         if df is not None:
             return df[df['dataset_id'] == dataset_id].to_dict('records')
     except:
