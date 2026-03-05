@@ -716,12 +716,16 @@ def extract_followup_questions(response):
         # Also capture bullet points that look like questions/commands at the end
         if line.startswith('•') or line.startswith('-') or line.startswith('*'):
             clean = re.sub(r'^[\•\-\*]+\s*', '', line).strip()
+            # Remove surrounding quotes
+            clean = clean.strip('"\'')
             # Check if it looks like a follow-up question/command
             if any(clean.lower().startswith(cmd) for cmd in ['show', 'compare', 'list', 'what', 'which', 'how', 'why', 'create', 'generate', 'display']):
                 in_followup = True
         
         if in_followup:
             clean = re.sub(r'^[\d\.\)\-\*\•]+\s*', '', line).strip()
+            # Remove surrounding quotes
+            clean = clean.strip('"\'')
             # Remove any JSON from the question
             clean = re.sub(r'```json.*?```', '', clean, flags=re.DOTALL)
             clean = re.sub(r'\{[^}]*"chart_type"[^}]*\}', '', clean)
@@ -752,8 +756,8 @@ def clean_response_for_display(response):
     # Remove follow-up section (various formats)
     cleaned = re.sub(r'Follow-up questions:.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     cleaned = re.sub(r'Suggested follow-up.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
-    # Remove bullet point questions at the end (• Show me... • Which... • Compare...)
-    cleaned = re.sub(r'(\n\s*•\s*(Show|Which|Compare|What|How|Create|List|Display)[^\n]*)+\s*$', '', cleaned, flags=re.IGNORECASE)
+    # Remove bullet point questions at the end (• Show me... • Which... • Compare...) - with or without quotes
+    cleaned = re.sub(r'(\n\s*•\s*"?(Show|Which|Compare|What|How|Create|List|Display)[^\n]*)+\s*$', '', cleaned, flags=re.IGNORECASE)
     # Clean up extra whitespace
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
     return cleaned.strip()
