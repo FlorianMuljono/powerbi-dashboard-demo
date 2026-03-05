@@ -314,6 +314,61 @@ def get_dashboards(dataset_id):
         pass
     return []
 
+def generate_dashboard_followups(current_dashboard_name, all_dashboards, stats):
+    """Generate contextual follow-up questions after showing a dashboard.
+    All questions are data questions (no dashboard navigation) to reserve
+    dashboard display for keyword matching demonstration.
+    """
+    
+    # Hardcoded data questions for each dashboard type
+    # All questions can be answered with available stats data
+    dashboard_followups = {
+        "overview": [
+            "Which town has the highest average price?",
+            "Compare flat type prices",
+            "Show me price trends from 2017 to 2025"
+        ],
+        "before after 2020": [
+            "How did prices change after 2020?",
+            "Which year had the highest transactions?",
+            "Compare 2019 vs 2023 prices"
+        ],
+        "2020": [
+            "How did prices change after 2020?",
+            "Which year had the highest transactions?",
+            "Compare 2019 vs 2023 prices"
+        ],
+        "trend": [
+            "How did prices change after 2020?",
+            "Which year had the highest transactions?",
+            "Show me a chart of yearly price trends"
+        ],
+        "affordability": [
+            "Which town has the lowest price for 4 ROOM flats?",
+            "Which town is most expensive for EXECUTIVE flats?",
+            "Compare Bishan vs Yishun prices"
+        ],
+        "factor": [
+            "Compare EXECUTIVE vs 5 ROOM prices",
+            "Which storey range has the highest prices?",
+            "What is the average price for 3 ROOM flats?"
+        ]
+    }
+    
+    # Find matching follow-ups based on dashboard name
+    name_lower = current_dashboard_name.lower()
+    
+    for key, questions in dashboard_followups.items():
+        if key in name_lower:
+            return questions
+    
+    # Default fallback questions (safe, can be answered with basic stats)
+    return [
+        "Which town has the highest average price?",
+        "Which flat type is most expensive?",
+        "Show me a chart of prices by town"
+    ]
+
 # =============================================================================
 # AI API FUNCTIONS
 # =============================================================================
@@ -427,12 +482,37 @@ For charts, use: ```json{{"chart_type": "bar", "title": "Title", "data": {{"labe
 # =============================================================================
 
 def parse_chart_from_response(response):
+    # Try standard ```json ... ``` format
     match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
     if match:
         try:
             return json.loads(match.group(1))
         except:
             pass
+    
+    # Try ``` ... ``` without json tag
+    match = re.search(r'```\s*(\{.*?"chart_type".*?\})\s*```', response, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except:
+            pass
+    
+    # Try finding raw JSON with chart_type
+    match = re.search(r'(\{"chart_type"[^`]*\})', response, re.DOTALL)
+    if match:
+        try:
+            # Clean up any trailing text
+            json_str = match.group(1)
+            # Find the last closing brace that makes valid JSON
+            for i in range(len(json_str), 0, -1):
+                try:
+                    return json.loads(json_str[:i])
+                except:
+                    continue
+        except:
+            pass
+    
     return None
 
 def get_value_based_colors(values, color_light='#c7d2fe', color_dark='#4f46e5'):
@@ -489,6 +569,32 @@ def create_chart(chart_data):
     title = chart_data.get("title", "Chart")
     x_label = chart_data.get("x_label", "")
     y_label = chart_data.get("y_label", "")
+    
+    # Auto-sort bar charts by value for cleaner visualization
+    # Detect sort order from title or default to descending (highest first)
+    if chart_type in ["bar", "horizontal_bar"]:
+        title_lower = title.lower()
+        # Check if ascending order is requested
+        ascending = any(word in title_lower for word in ['ascending', 'lowest', 'cheapest', 'smallest', 'minimum'])
+        # Check if descending order is requested (or default)
+        descending = any(word in title_lower for word in ['descending', 'highest', 'most expensive', 'largest', 'maximum', 'top'])
+        
+        # Sort if we have numeric values
+        try:
+            # Pair labels with values and sort
+            paired = list(zip(labels, values))
+            if ascending:
+                paired.sort(key=lambda x: float(x[1]) if isinstance(x[1], (int, float)) else 0)
+            elif descending or not ascending:
+                # Default to ascending for visual clarity (low to high, bars grow)
+                paired.sort(key=lambda x: float(x[1]) if isinstance(x[1], (int, float)) else 0)
+            
+            # Unzip back
+            labels, values = zip(*paired)
+            labels = list(labels)
+            values = list(values)
+        except:
+            pass  # Keep original order if sorting fails
     
     # Get value-based colors (works for ALL chart types)
     colors = get_value_based_colors(values)
@@ -634,13 +740,22 @@ def extract_followup_questions(response):
     return questions[:3]
 
 def clean_response_for_display(response):
-    # Remove JSON code blocks
+    # Remove JSON code blocks (various formats)
     cleaned = re.sub(r'```json\s*.*?\s*```', '', response, flags=re.DOTALL)
+    cleaned = re.sub(r'```\s*\{.*?"chart_type".*?\}\s*```', '', cleaned, flags=re.DOTALL)
+    # Remove raw JSON with chart_type (handles cases without backticks)
+    cleaned = re.sub(r'\{"chart_type"[^}]*"y_label"[^}]*\}', '', cleaned, flags=re.DOTALL)
+    # Remove "Here is a chart" type lines followed by json
+    cleaned = re.sub(r'Here is a chart[^\n]*:\s*\n?\s*`?\s*json\s*', '', cleaned, flags=re.IGNORECASE)
+    # Remove standalone json tag
+    cleaned = re.sub(r'^\s*`?\s*json\s*$', '', cleaned, flags=re.MULTILINE)
     # Remove follow-up section (various formats)
     cleaned = re.sub(r'Follow-up questions:.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     cleaned = re.sub(r'Suggested follow-up.*', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     # Remove bullet point questions at the end (• Show me... • Which... • Compare...)
     cleaned = re.sub(r'(\n\s*•\s*(Show|Which|Compare|What|How|Create|List|Display)[^\n]*)+\s*$', '', cleaned, flags=re.IGNORECASE)
+    # Clean up extra whitespace
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
     return cleaned.strip()
 
 def format_response_html(content):
@@ -1049,40 +1164,67 @@ def render_main_app():
                     best_score = 0
                     q_lower = q.lower()
                     
+                    # Remove common words that shouldn't affect matching
+                    q_clean = q_lower.replace('dashboard', '').replace('show me', '').replace('the', '').replace('please', '').strip()
+                    
                     for dash in dashboards:
                         keywords = dash.get('keywords', '').lower().split(',')
-                        keywords = [k.strip() for k in keywords]
+                        keywords = [k.strip() for k in keywords if k.strip()]
+                        
+                        # Also check dashboard name words
+                        name_words = dash.get('dashboard_name', '').lower().split()
                         
                         # Count how many keywords match
                         score = 0
                         for keyword in keywords:
-                            if keyword and keyword in q_lower:
+                            if keyword and keyword in q_clean:
                                 # Longer keyword matches = higher score
-                                score += len(keyword)
+                                score += len(keyword) * 2
+                        
+                        # Also match dashboard name words
+                        for word in name_words:
+                            if word and len(word) > 3 and word in q_clean:
+                                score += len(word)
                         
                         if score > best_score:
                             best_score = score
                             best_match = dash
                     
-                    # If no keyword match, default to Overview (first) dashboard
+                    # If no keyword match and query is just "dashboard" or "overview dashboard"
+                    # then show overview. Otherwise, let AI handle it.
                     if not best_match:
-                        # Look for overview dashboard first
-                        for dash in dashboards:
-                            if 'overview' in dash.get('dashboard_name', '').lower():
-                                best_match = dash
-                                break
-                        # If no overview, use first dashboard
-                        if not best_match:
-                            best_match = dashboards[0]
+                        # Only default to overview for generic requests
+                        generic_patterns = ['dashboard', 'overview dashboard', 'general dashboard', 'summary dashboard', 'show me the dashboard']
+                        is_generic = any(q_lower.strip() == p or q_lower.strip() == p.replace('the ', '') for p in generic_patterns)
+                        
+                        if is_generic:
+                            # Look for overview dashboard
+                            for dash in dashboards:
+                                if 'overview' in dash.get('dashboard_name', '').lower():
+                                    best_match = dash
+                                    break
+                            if not best_match:
+                                best_match = dashboards[0]
+                        else:
+                            # Not a generic request - let AI handle it instead
+                            best_match = None
                     
-                    url = best_match.get('embed_url', '')
-                    name = best_match.get('dashboard_name', 'Dashboard')
-                    description = best_match.get('description', '')
-                    
-                    if url and url.startswith('http'):
-                        response = f"Here's the {name} dashboard:\n\n{description}\n\n[DASHBOARD:{url}]\n\nFollow-up questions:\n1. What trends do you notice in this visualization?\n2. Would you like to see a different dashboard (Town, Flat Type, Trends, or Storey analysis)?\n3. Should I explain any specific insight from this view?"
+                    if best_match:
+                        url = best_match.get('embed_url', '')
+                        name = best_match.get('dashboard_name', 'Dashboard')
+                        description = best_match.get('description', '')
+                        
+                        if url and url.startswith('http'):
+                            # Generate contextual follow-up questions
+                            followups = generate_dashboard_followups(name, dashboards, stats)
+                            followup_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(followups)])
+                            response = f"Here's the {name} dashboard:\n\n{description}\n\n[DASHBOARD:{url}]\n\nFollow-up questions:\n{followup_text}"
+                        else:
+                            response = f"The {name} dashboard URL is not configured yet.\n\nPlease add the Power BI embed URL to the Google Sheet.\n\nFollow-up questions:\n1. What specific data would you like to explore?\n2. Should I create a chart for you?\n3. Which metrics are most important?"
                     else:
-                        response = f"The {name} dashboard URL is not configured yet.\n\nPlease add the Power BI embed URL to the Google Sheet.\n\nFollow-up questions:\n1. What specific data would you like to explore?\n2. Should I create a chart for you?\n3. Which metrics are most important?"
+                        # No matching dashboard - let AI answer with available data
+                        with st.spinner("Analyzing..."):
+                            response = get_ai_response(q, current_ds['dataset_name'], stats)
                 else:
                     response = "No dashboards configured for this dataset yet.\n\nFollow-up questions:\n1. What specific data would you like to explore?\n2. Should I create a chart for you?\n3. Which metrics are most important?"
             else:
